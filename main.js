@@ -138,6 +138,7 @@ $(document).ready(function(){
 		if (link.split('#').length > 1 && link.split("youtube").length > 1){
 	        var settings = JSON.parse(link.split("#")[1].replace(/\%22/g,'"').replace(/%0D/g, "")); //settings is an object including title, remain, link, host, downloadTo
 	        $('body').remove(); //Stop video
+	        link = link+"&title="+settings.title;
 	        SaveToDisk(link, settings); //Save
 	        window.parent.postMessage({origin:settings.host, id:settings.id}, settings.host);
 	    }
@@ -188,7 +189,6 @@ function GetVid(link, type, requiresAudio, label){ //Force the download to be st
 	var title = GetTitle(label);
     var settings = {"title":title, "host":host, "type":type, "id":idCount, "label":label};
   	if (link.split("title").length > 1) link = link.getAfter("title=", "&");
-    link += "&title="+encodeURIComponent(settings.title);
 
     var $iframe = $("<iframe>", { //Send video to other script to be downloaded.
         src: link + "#" + JSON.stringify(settings),
@@ -257,21 +257,25 @@ function HandleAudio(settings, type){
 function MakeScript(title, type1, type2, type3){
 	var script = [
 	"@echo off",
+	":start",
 	"ffmpeg -i \""+title+"."+type1+"\" -i \""+title+"."+type2+"\" -vcodec copy -acodec copy \""+title+"."+type3+"\"",
 	"if errorlevel 1 (goto error) else (goto success)",
 
 	":error",
 	"echo ERROR: You probably don't have ffmpeg installed",
-	"goto end",
+	"echo. & echo Retrying in 10 seconds",
+	"timeout /t 10 >nul",
+	"goto start",
 
 	":success",
 	"del \""+title+"."+type1+"\"",
 	"del \""+title+"."+type2+"\"",
 	"echo. & echo. & echo SUCCESS!",
+	"echo. & echo Exiting in 3 seconds",
 	"goto end",
 
 	":end",
-	"timeout /t 3 >nul "]       
+	"timeout /t 3 >nul"]       
 	
 	var text = new Blob([script.join("\r\n")], {"type":"application/bat"});
 	return text;
