@@ -2,7 +2,7 @@
 // @name         YouTube Downloader
 // @namespace    https://greasyfork.org/users/10036
 // @version      0.01
-// @description  Download 60fps videos and 128kbps audio from YouTube
+// @description  Download 60fps MP4 videos and 256kbps MP3 audio from YouTube
 // @author       D. Slee
 // @icon         http://youtube.com/favicon.ico
 // @include      http://www.youtube.com/watch?*
