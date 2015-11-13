@@ -5,9 +5,12 @@
 // @description  Download 60fps videos and 128kbps audio from YouTube
 // @author       D. Slee
 // @icon         http://youtube.com/favicon.ico
-// @include      http*://www.youtube.com/watch?*
+// @include      http://www.youtube.com/watch?*
+// @include      https://www.youtube.com/watch?*
 // @include      https://*.googlevideo.com/*
 // @include      https://*.c.docs.google.com/*
+// @include      http://peggo.co/dvr/*?hi
+// @include      https://www.youtube.com/?mp3redirect*
 // @license      Creative Commons; http://creativecommons.org/licenses/by/4.0/
 // @require      http://code.jquery.com/jquery-1.11.0.min.js
 // @grant        none
@@ -17,8 +20,10 @@
 //Down arrow selector icon is made by Freepik at http://www.freepik.com under Creative Commons 3.0
 
 //This script contains two parts
-//1. The local handler
-//2. The external handler
+//1. The local handler - Handles all activity on the main site
+//2. The external handler - Handles the source/s of the videos
+//3. MP3 Redirector - Supposed to redirect HTTPS to HTTP >> Doesn't work at the moment
+//4. MP3 Handler - Downloads MP3
 
 Storage.prototype.setObject = function(key, value){ //Set JSON localstorage
     this.setItem(key, JSON.stringify(value));
@@ -99,13 +104,16 @@ $(document).ready(function(){
 				var hidden = (ignoreMuted || ignoreAudio) ? true : false;
 				if (reqAudio.indexOf(Number(val)) > -1) hidden = false, requiresAudio = true, text = text.replace(" (no audio)", "*");
 				qualities.push({val:val, link:link, text:text, type:type, hidden:hidden, requiresAudio:requiresAudio, label:label});
-			})
+			});
+			var redirect = "https://www.youtube.com/?mp3redirect#v="+window.location.href.split("?v=")[1].split("&")[0];
+			qualities.push({val:1000000, link:redirect, text:"256kbps", type:"mp3", hidden:false, dontWait:true})
 			qualities.sort(QualitySort);
 
 			$downBtn = $("<button>", {id:"downloadBtn", text:"Download"}).prepend($downloadIcon).click(function(){
 				if ($(this).hasClass("disabled")) return;
 				$(this).toggleState();
-				GetVid($("#downloadBtnInfo span").attr("link"), $("#downloadBtnInfo span").attr("type"), $("#downloadBtnInfo span").attr("requiresAudio"), $("#downloadBtnInfo span").attr("label"));
+				var $span = $("#downloadBtnInfo span");
+				GetVid($span.attr("link"), $span.attr("type"), $span.attr("requiresAudio"), $span.attr("label"), $span.attr("dontWait"));
 			});
 			$quality = $("<span>", {id:"downloadBtnInfo"}).append($downArrow).click(function(){
 				$options.toggle();
@@ -142,9 +150,26 @@ $(document).ready(function(){
 	        SaveToDisk(link, settings); //Save
 	        window.parent.postMessage({origin:settings.host, id:settings.id}, settings.host);
 	    }
+	/* ---------------  PART III, MP3 Redirector  --------------------- */
+	} else if (window.location.href.indexOf("/?mp3redirect") > -1){
+		var v = window.location.href.split("#v=")[1];
+		var $iframe = $("<iframe>", {
+			src:"http://peggo.co/dvr/"+v+"?hi"
+		});
+		$("body").html("");
+		setTimeout(function(){ document.location.href = "http://peggo.co/dvr/"+v+"?hi"; }, 5000);
+
+	/* ---------------  PART IV, MP3 Handler  --------------------- */	
+	} else if (window.location.href.indexOf("peggo") > -1){
+		$(document).ready(function(){
+			$("#audio-bitrate-select").val(256);
+			$("#record-audio").get(0).click();
+		})
 	}
-})
-/* ----------------- PART III, iframe handler ---------------------- */
+});
+
+if (window.location.href.indexOf("peggo") > -1) return;
+/* ----------------- PART V, iframe Handler ---------------------- */
 $(document).ready(function(){
     var eventMethod = window.addEventListener ? "addEventListener" : "attachEvent";
     var eventer = window[eventMethod];
@@ -183,21 +208,26 @@ function HandleVal(val, text, type, exempt){ //Return the correct value
 	return val;
 }
 
-function GetVid(link, type, requiresAudio, label){ //Force the download to be started from an iframe
+function GetVid(link, type, requiresAudio, label, dontWait){ //Force the download to be started from an iframe
 	if (type === 'mp4' && requiresAudio) type = 'm4v';
     var host = GetHost();
 	var title = GetTitle(label);
     var settings = {"title":title, "host":host, "type":type, "id":idCount, "label":label};
   	if (link.split("title").length > 1) link = link.getAfter("title=", "&");
+  	if (!dontWait) link = link + "#" + JSON.stringify(settings);
 
     var $iframe = $("<iframe>", { //Send video to other script to be downloaded.
-        src: link + "#" + JSON.stringify(settings),
+        src: link,
         style: "width:0;height:0",
         id: idCount
     });
     $("body").append($iframe);
-    idCount++;
-    remain ++;
+    if (dontWait){
+    	setTimeout(function(){ $("#downloadBtn").onState()}, 1500);
+    } else {
+    	idCount++;
+    	remain ++;
+    }
 
  	Interval.prototype.iframeCheck = function(){ //this.id should refer to the id of the iframe (iframeId)
 	    ($("#"+this.id).length > 0) ? $('#'+this.id).attr("src", $('#'+this.id).attr("src")) : this.kill();
@@ -276,7 +306,8 @@ function MakeScript(title, type1, type2, type3){
 	"goto end",
 
 	":end",
-	"timeout /t 3 >nul"]       
+	"timeout /t 3 >nul",
+	"(goto) 2>nul & del \"%~f0\""];       
 	
 	var text = new Blob([script.join("\r\n")], {"type":"application/bat"});
 	return text;
@@ -313,10 +344,11 @@ function SortQualities($quality, $options){
 			type:qualities[i].type,
 			label:qualities[i].label,
 			style:"display:"+display,
-			requiresAudio:qualities[i].requiresAudio
+			requiresAudio:qualities[i].requiresAudio,
+			dontWait:qualities[i].dontWait
 		});
 
-		var $span = $("<span>", {html:$li.html(), label:$li.attr("label"), link:$li.attr("link"), type:$li.attr("type"), requiresAudio:$li.attr("requiresAudio")});
+		var $span = $("<span>", {html:$li.html(), label:$li.attr("label"), link:$li.attr("link"), type:$li.attr("type"), requiresAudio:$li.attr("requiresAudio"), dontWait:$li.attr("dontWait")});
 		if (Number($li.attr("value")) === global_settings.quality && $li.attr("type") === global_settings.type && !qualitySet){
 			$quality.append($span).append($downArrow);
 			qualitySet = true;
