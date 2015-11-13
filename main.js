@@ -153,7 +153,7 @@ $(document).ready(function(){
 		if (link.split('#').length > 1 && link.split("youtube").length > 1){
 	        var settings = JSON.parse(link.split("#")[1].replace(/\%22/g,'"').replace(/%0D/g, "")); //settings is an object including title, remain, link, host, downloadTo
 	        $('body').remove(); //Stop video
-	        link = link+"&title="+settings.title;
+	        link = link+"&title="+encodeURIComponent(settings.title);
 	        SaveToDisk(link, settings); //Save
 	        window.parent.postMessage({origin:settings.host, id:settings.id}, settings.host);
 	    }
