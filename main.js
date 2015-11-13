@@ -101,7 +101,6 @@ $(document).ready(function(){
 				qualities.push({val:val, link:link, text:text, type:type, hidden:hidden, requiresAudio:requiresAudio, label:label});
 			})
 			qualities.sort(QualitySort);
-			console.log(qualities);
 
 			$downBtn = $("<button>", {id:"downloadBtn", text:"Download"}).prepend($downloadIcon).click(function(){
 				if ($(this).hasClass("disabled")) return;
@@ -200,14 +199,11 @@ function GetVid(link, type, requiresAudio, label){ //Force the download to be st
     idCount++;
     remain ++;
 
-    if (requiresAudio === 'true') HandleAudio(settings, type);
-
  	Interval.prototype.iframeCheck = function(){ //this.id should refer to the id of the iframe (iframeId)
- 		console.log("CHECK");
 	    ($("#"+this.id).length > 0) ? $('#'+this.id).attr("src", $('#'+this.id).attr("src")) : this.kill();
 	    this.exec += 1;
 	    if (this.exec > 1 && global_settings.debug){
-	    	alert("HEUSTON, we have a problem");
+	    	console.log("HEUSTON, we have a problem");
 		};
     }
     Interval.prototype.makeIframeInterval = function(){
@@ -215,8 +211,9 @@ function GetVid(link, type, requiresAudio, label){ //Force the download to be st
 		this.interval = setInterval(function(){ _this.iframeCheck()}, 4000);
 	}
 
-    var interval = new Interval({id:idCount, title:title, make:'makeIframeInterval'});
+    var interval = new Interval({id:idCount-1, title:title, make:'makeIframeInterval'});
     interval[interval.make]();
+    if (requiresAudio === 'true') HandleAudio(settings, type);
 }
 
 function Interval(params){
@@ -245,8 +242,7 @@ function GetHost(){
 
 function GetTitle(label){
 	var label = (label) ? label : "";
-	var str = $("title").html().split(" - YouTube")[0].replace(/"/g, "").replace(/'/g, '').replace(/\?/g, '');
-	console.log(label);
+	var str = $("title").html().split(" - YouTube")[0].replace(/"/g, "").replace(/'/g, '').replace(/\?/g, '').replace(/:/g, '');
 	if (global_settings.label) str = str+" "+label.toString();
 	return str;
 }
