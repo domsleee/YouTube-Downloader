@@ -255,6 +255,7 @@ function HandleAudio(settings, type){
 }
 
 function MakeScript(title, type1, type2, type3){
+	if (type1 === 'webm') type3 = 'avi';
 	var script = [
 	"@echo off",
 	":start",
@@ -262,16 +263,16 @@ function MakeScript(title, type1, type2, type3){
 	"if errorlevel 1 (goto error) else (goto success)",
 
 	":error",
-	"echo ERROR: You probably don't have ffmpeg installed",
-	"echo. & echo Retrying in 10 seconds",
+	"echo. &echo ERROR: Oh noes! Either: &echo. &echo You don't have ffmpeg installed &echo. &echo Some weird codec error &echo. &echo Something completely random &echo. &echo. &echo Please notify developer at GreasyFork.",
+	"echo. &echo Retrying in 10 seconds",
 	"timeout /t 10 >nul",
 	"goto start",
 
 	":success",
 	"del \""+title+"."+type1+"\"",
 	"del \""+title+"."+type2+"\"",
-	"echo. & echo. & echo SUCCESS!",
-	"echo. & echo Exiting in 3 seconds",
+	"echo. &echo. &echo SUCCESS!",
+	"echo. &echo Exiting in 3 seconds",
 	"goto end",
 
 	":end",
