@@ -9,8 +9,7 @@
 // @include      https://www.youtube.com/watch?*
 // @include      https://*.googlevideo.com/*
 // @include      https://*.c.docs.google.com/*
-// @include      http://peggo.co/dvr/*?hi
-// @include      https://www.youtube.com/?mp3redirect*
+// @include      http://peggo.co/dvr/*?hi*
 // @license      Creative Commons; http://creativecommons.org/licenses/by/4.0/
 // @require      http://code.jquery.com/jquery-1.11.0.min.js
 // @grant        none
@@ -22,8 +21,8 @@
 //This script contains two parts
 //1. The local handler - Handles all activity on the main site
 //2. The external handler - Handles the source/s of the videos
-//3. MP3 Redirector - Supposed to redirect HTTPS to HTTP >> Doesn't work at the moment
-//4. MP3 Handler - Downloads MP3
+//3. MP3 Handler - Downloads MP3
+//4. Iframe Handler - Handles the iframe post events
 
 Storage.prototype.setObject = function(key, value){ //Set JSON localstorage
     this.setItem(key, JSON.stringify(value));
@@ -37,9 +36,9 @@ Storage.prototype.getObject = function(key){ //Retrieve JSON localstorage
 String.prototype.getAfter = function(a, b){
 	var str_a = this.split(a)[0];
 	var str_b = this.split(a)[1].split(b);
-    str_b.splice(0, 1)
-	return str_a + str_b.join(b)
-}
+    str_b.splice(0, 1);
+	return str_a + str_b.join(b);
+};
 
 jQuery.fn.extend({
 	toggleState: function(){
@@ -66,6 +65,8 @@ var default_setings = { //Default settings
     'type':'mp4',       //Default type
     'label':true        //Have quality label on download
 };
+var audios = [128, 192, 256];
+
 SetupGlobalSettings(); //Ensures that all global_settings are set... if not, refer to default_settings
 MakeCss([
 	".disabled{ cursor:default!important}",
@@ -83,11 +84,10 @@ MakeCss([
 var $downloadIcon = $("<img>", {style:'margin-right:4.5px', class:'midalign', src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA3ElEQVQ4T6WT7RHBQBCGn1RAB3RAB6hAVEA6oAI6QAdK0AE6oIOkAx0wb+bO7NxskjHZP7m53ffZj9tk9LSsp542wBgYhQQv4O0l8wBD4AhsEsEF2KUgD/AEJg2tybewEAvIgTWgb5upilMMiIArsExUD2Ae7u7ALJxLYAWomnqIB2DvpGwCxFAlLQTwepZY99sQrZKnpooIOQvwcbJr4oXzCpqRtVIA2591WojOqVixlQAa1K1h7BIqxhNLUrcg09Koz8Efq6055ekixWfr4mitf8/YFdzq7/03fgFd3CYQgbnh+gAAAABJRU5ErkJggg=="});
 var $downArrow = $("<img>", {style:'margin-left:6px;', class:'midalign', src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAAV0lEQVQoU2NkIBEwkqiegXQNc+fOTWBkZJxPjE3///9PBNtAjCaQ4uTk5AVwJ+HTBFMMMhzFD9g0ISvG0IDuPHTFWDXANIFokJvRA4P0YCUmOJHVkGwDAPVTKkQsO0MlAAAAAElFTkSuQmCC"});
 
-
 /* -----------------  PART I, the local handler  ----------------------- */
 $(document).ready(function(){
 	if (window.location.href.indexOf("watch") > -1){
-		var exempt = ["1080p (no audio)", "480p (no audio)"]
+		var exempt = ["1080p (no audio)", "480p (no audio)"];
 		var reqAudio = [72060, 72060000, 108060, 108060000, 1080, 1080000, 480, 480000];
 		YQL(window.location.href, function(xhr){
 			var $iframe = $(xhr);
@@ -105,15 +105,22 @@ $(document).ready(function(){
 				if (reqAudio.indexOf(Number(val)) > -1) hidden = false, requiresAudio = true, text = text.replace(" (no audio)", "*");
 				qualities.push({val:val, link:link, text:text, type:type, hidden:hidden, requiresAudio:requiresAudio, label:label});
 			});
-			var redirect = "https://www.youtube.com/?mp3redirect#v="+window.location.href.split("?v=")[1].split("&")[0];
-			qualities.push({val:1000000, link:redirect, text:"256kbps", type:"mp3", hidden:false, dontWait:true})
+			var v = window.location.href.split("?v=")[1].split("&")[0];
+			var redirect = "http://peggo.co/dvr/"+v+"?hi";
+			for (i = 0; i<audios.length; i++){
+				qualities.push({val:-audios[i], link:redirect+"&q="+audios[i], text:audios[i].toString()+"kbps", type:"mp3", hidden:false, mp3:true});
+			}
 			qualities.sort(QualitySort);
 
 			$downBtn = $("<button>", {id:"downloadBtn", text:"Download"}).prepend($downloadIcon).click(function(){
 				if ($(this).hasClass("disabled")) return;
 				$(this).toggleState();
 				var $span = $("#downloadBtnInfo span");
-				GetVid($span.attr("link"), $span.attr("type"), $span.attr("requiresAudio"), $span.attr("label"), $span.attr("dontWait"));
+				GetVid($span.attr("link"), $span.attr("type"), $span.attr("requiresAudio"), $span.attr("label"), $span.attr("mp3"));
+			});
+			$(document).click(function(e){
+				if (e.target.id === 'downloadBtnInfo' || $(e.target).parent().attr("id") === 'downloadBtnInfo') return;
+				$options.hide();
 			});
 			$quality = $("<span>", {id:"downloadBtnInfo"}).append($downArrow).click(function(){
 				$options.toggle();
@@ -138,8 +145,8 @@ $(document).ready(function(){
 				if ($("#options").length > 0){
 					AdjustOptions($("#options"));
 				}
-			})
-		})
+			});
+		});
 	/* ---------------  PART II, the external handler  --------------------- */
 	} else if (window.location.href.indexOf("google") > -1 && window.location.href.indexOf("youtube") > -1){
 		var link = window.location.href;
@@ -150,26 +157,26 @@ $(document).ready(function(){
 	        SaveToDisk(link, settings); //Save
 	        window.parent.postMessage({origin:settings.host, id:settings.id}, settings.host);
 	    }
-	/* ---------------  PART III, MP3 Redirector  --------------------- */
-	} else if (window.location.href.indexOf("/?mp3redirect") > -1){
-		var v = window.location.href.split("#v=")[1];
-		var $iframe = $("<iframe>", {
-			src:"http://peggo.co/dvr/"+v+"?hi"
-		});
-		$("body").html("");
-		setTimeout(function(){ document.location.href = "http://peggo.co/dvr/"+v+"?hi"; }, 5000);
 
-	/* ---------------  PART IV, MP3 Handler  --------------------- */	
+	/* ---------------  PART III, MP3 Handler  --------------------- */	
 	} else if (window.location.href.indexOf("peggo") > -1){
 		$(document).ready(function(){
-			$("#audio-bitrate-select").val(256);
+			var lightbox = new Lightbox("Notice", $("<div>", {style:'margin-bottom:1em', html:"This is a (hopefully) temporary solution. The problem is that YouTube uses the HTTPS protocol, whereas this site uses HTTP. As such, Javascript CANNOT embed this site in YouTube, hence leaving the only solution: To open the site in a new window</p><p>Anyway, this will close in 10 seconds</p>"}));
+			lightbox.enable();
+			new timeout({range:[0, 11], time:1, callback:function(i){ //execute a for loop for range, execute every certain amount of seconds
+		        var lightbox = new Lightbox("Notice", $("<div>", {html:(10-i)+"..."}));
+		        $("title").text(10-i+" seconds remaining");
+		        if (i === 10) self.close();
+		    }});
+			$("#audio-bitrate-select").val(window.location.href.split("&q=")[1]);
 			$("#record-audio").get(0).click();
-		})
+
+		});
 	}
 });
 
-if (window.location.href.indexOf("peggo") > -1) return;
-/* ----------------- PART V, iframe Handler ---------------------- */
+if (window.location.href.indexOf("watch") === -1) return;
+/* ----------------- PART IV, iframe Handler ---------------------- */
 $(document).ready(function(){
     var eventMethod = window.addEventListener ? "addEventListener" : "attachEvent";
     var eventer = window[eventMethod];
@@ -190,7 +197,7 @@ $(document).ready(function(){
 function YQL(youtubeURL, callback){ //Makes a call the YQL console with the given youtubeURL
 	$.get("https://query.yahooapis.com/v1/public/yql", {
 		q:"SELECT * FROM html WHERE url='https://www.savedeo.com/download?url="+encodeURIComponent(youtubeURL)+"'"
-	}, callback)
+	}, callback);
 }
 
 function HandleText(text){ //Return the correct text
@@ -208,23 +215,24 @@ function HandleVal(val, text, type, exempt){ //Return the correct value
 	return val;
 }
 
-function GetVid(link, type, requiresAudio, label, dontWait){ //Force the download to be started from an iframe
+function GetVid(link, type, requiresAudio, label, mp3){ //Force the download to be started from an iframe
 	if (type === 'mp4' && requiresAudio) type = 'm4v';
     var host = GetHost();
 	var title = GetTitle(label);
     var settings = {"title":title, "host":host, "type":type, "id":idCount, "label":label};
   	if (link.split("title").length > 1) link = link.getAfter("title=", "&");
-  	if (!dontWait) link = link + "#" + JSON.stringify(settings);
+  	if (!mp3) link = link + "#" + JSON.stringify(settings);
 
     var $iframe = $("<iframe>", { //Send video to other script to be downloaded.
         src: link,
         style: "width:0;height:0",
         id: idCount
     });
-    $("body").append($iframe);
-    if (dontWait){
+    if (mp3){
+    	window.open(link,'Closing in 10 seconds');
     	setTimeout(function(){ $("#downloadBtn").onState()}, 1500);
     } else {
+    	$("body").append($iframe);
     	idCount++;
     	remain ++;
     }
@@ -234,12 +242,12 @@ function GetVid(link, type, requiresAudio, label, dontWait){ //Force the downloa
 	    this.exec += 1;
 	    if (this.exec > 1 && global_settings.debug){
 	    	console.log("HEUSTON, we have a problem");
-		};
-    }
+		}
+    };
     Interval.prototype.makeIframeInterval = function(){
     	var _this = this;
 		this.interval = setInterval(function(){ _this.iframeCheck()}, 4000);
-	}
+	};
 
     var interval = new Interval({id:idCount-1, title:title, make:'makeIframeInterval'});
     interval[interval.make]();
@@ -258,12 +266,11 @@ function Interval(params){
 Interval.prototype.kill = function(remove){
 	clearInterval(this.interval);
     this.active = false;
-    if (remove) processes.splice(this, 1);
-}
+};
 Interval.prototype.resume = function(){
 	this.exec = 0;
 	this[this.make]();
-}
+};
 
 function GetHost(){
     split = ".com";
@@ -328,7 +335,6 @@ function SaveToDisk(link, settings){
         cancelable: true
     });
     save.dispatchEvent(mouseEvent);
-
 }
 
 function SortQualities($quality, $options){
@@ -345,10 +351,10 @@ function SortQualities($quality, $options){
 			label:qualities[i].label,
 			style:"display:"+display,
 			requiresAudio:qualities[i].requiresAudio,
-			dontWait:qualities[i].dontWait
+			mp3:qualities[i].mp3
 		});
 
-		var $span = $("<span>", {html:$li.html(), label:$li.attr("label"), link:$li.attr("link"), type:$li.attr("type"), requiresAudio:$li.attr("requiresAudio"), dontWait:$li.attr("dontWait")});
+		var $span = $("<span>", {html:$li.html(), label:$li.attr("label"), link:$li.attr("link"), type:$li.attr("type"), requiresAudio:$li.attr("requiresAudio"), mp3:$li.attr("mp3")});
 		if (Number($li.attr("value")) === global_settings.quality && $li.attr("type") === global_settings.type && !qualitySet){
 			$quality.append($span).append($downArrow);
 			qualitySet = true;
@@ -366,7 +372,7 @@ function SortQualities($quality, $options){
 function AddEvents(){ //Adds events to the window
 	$(window).resize(function(){
 		AdjustOptions($("#options"));
-	})
+	});
 }
 
 function AdjustOptions($element){ //Readjusts the values of the option window to correctly align it
@@ -375,8 +381,8 @@ function AdjustOptions($element){ //Readjusts the values of the option window to
 }
 
 function QualitySort(a, b){
-	if (Number(a.val) === NaN) a.val = 0;
-	if (Number(b.val) === NaN) b.val = 0;
+	if (isNaN(a.val)) a.val = 0;
+	if (isNaN(b.val)) b.val = 0;
 	return Number(b.val) - Number(a.val);
 }
 
@@ -398,4 +404,72 @@ function SetupGlobalSettings(){
 
 function UpdateGlobalSettings(){
     localStorage.setObject('global_settings', global_settings);
+}
+
+function timeout(params){
+	this.params = params || {};
+	for (var key in this.params){
+		if (this.params.hasOwnProperty(key)){
+			this[key] = this.params[key];
+		}
+	}
+    this.loop = function(){
+        this.callback(this.range[0]);
+        var _this = this;
+        setTimeout(function(){
+            _this.range[0]++;
+            if (_this.range[0]<_this.range[1]){
+                _this.loop();
+            }
+        }, this.time*1000);
+    };
+    this.loop();
+}
+
+function Lightbox(id, $container, params){
+    var params = params || {};
+    var count = (params.count) ? "_"+params.count.toString() : "";
+    var _this = this;
+    this.enable = function(){
+        $("#"+id+count+"_box").show();
+        $("#"+id+count+"_content").show();
+    };
+    this.disable = function(){
+        $("#"+id+count+"_box").hide();
+        $("#"+id+count+"_content").hide();
+    };
+
+    var $content = $("<div>").append("<h1 class='coolfont' style='font-size:1.5em;padding:0.5em;text-align:center'>"+id+"</h1>");
+    $content.append($container);
+    LockScroll($container);
+
+    this.closeHandle = function(e){
+        e.data._this.disable();
+    };
+    
+    var $box = $("<div>", {
+        style:"display:none;width:100%;height:150%;top:-25%;position:fixed;background-color:black;opacity:0.8;z-index:99",
+        id:id+count+'_box'
+    }).click({_this:_this, params:params}, this.closeHandle);
+    
+    $content.css("margin", "0.5em 1em").addClass("unselectable");
+    var $wrap = $("<div>", {
+        id:id+count+"_content",
+        style:"color:black;display:none;background-color:white;position:fixed;width:400px;height:300px;margin:auto;left:0;right:0;top:30%;border:1px solid #999999;z-index:100"
+    }).append($content);
+    
+    if ($("#"+id+"_content").length === 0) {
+    	$("body").append($box).append($wrap);
+    } else {
+    	$("#"+id+"_content div").html($("#"+id+"_content div").html()+$container.html());
+    }
+}
+
+function LockScroll($element){
+    $element.bind("mousewheel DOMMouseScroll", function(e){
+        var up = (e.originalEvent.wheelDelta > 0 || e.originalEvent.detail < 0);
+        if ((Math.abs(this.scrollTop - (this.scrollHeight - $(this).height())) < 2 && !up) || (this.scrollTop === 0 && up)){
+            e.preventDefault();
+        }
+    });
 }
