@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         YouTube Downloader
 // @namespace    https://greasyfork.org/users/10036
-// @version      0.04
+// @version      0.05
 // @description  Download 60fps MP4 videos and 256kbps MP3 audio from YouTube
 // @author       D. Slee
 // @icon         http://youtube.com/favicon.ico
-// @include      http://www.youtube.com/watch?*
-// @include      https://www.youtube.com/watch?*
+// @include      http://www.youtube.com*
+// @include      https://www.youtube.com*
 // @include      https://*.googlevideo.com/*
 // @include      https://*.c.docs.google.com/*
 // @include      http://peggo.co/dvr/*?hi*
@@ -23,6 +23,7 @@
 //2. The external handler - Handles the source/s of the videos
 //3. MP3 Handler - Downloads MP3
 //4. Iframe Handler - Handles the iframe post events
+//5. Window change Handler - Since YouTube uses Ajax for all their pages, a manual window change function needed to be implemented
 
 Storage.prototype.setObject = function(key, value){ //Set JSON localstorage
 	this.setItem(key, JSON.stringify(value));
@@ -190,9 +191,9 @@ var Program = function(){
 	}
 };
 
-if (window.location.href.indexOf("watch") === -1) return;
 /* ----------------- PART IV, iframe Handler ---------------------- */
 $(document).ready(function(){
+	if (window.location.href.indexOf("watch") === -1) return;
 	var eventMethod = window.addEventListener ? "addEventListener" : "attachEvent";
 	var eventer = window[eventMethod];
 	var messageEvent = (eventMethod === "attachEvent") ? "onmessage" : "message";
@@ -210,11 +211,15 @@ $(document).ready(function(){
 	}); 
 });
 
-// Window change link listener
+/* -------------- PART V, Window change Handler ------------------- */
 var lastHref = window.location.href;
+var lastVid = '';
 setInterval(function(){
 	if (lastHref !== window.location.href){
-		if (lastHref.split("?v=")[1].split("&")[0] === window.location.href.split("?v=")[1].split("&")[0]) return;
+		if (window.location.href.split("?v=").length === 1) return;
+		var newVid = window.location.href.split("?v=")[1].split("&")[0];
+		if (lastVid === newVid) return;
+		lastVid = newVid;
 		setTimeout(function(){ Program();}, 1500);
 		lastHref = window.location.href;
 	}
