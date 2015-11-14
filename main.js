@@ -37,7 +37,8 @@ String.prototype.getAfter = function(a, b){
 	var str_a = this.split(a)[0];
 	var str_b = this.split(a)[1].split(b);
     str_b.splice(0, 1);
-	return str_a + str_b.join(b);
+    var c = (str_b.length === 0) ? "" : b;
+	return str_a + c + str_b.join(b);
 };
 
 jQuery.fn.extend({
@@ -66,6 +67,7 @@ var default_setings = { //Default settings
     'label':true        //Have quality label on download
 };
 var audios = [128, 192, 256];
+var processes = [];
 
 SetupGlobalSettings(); //Ensures that all global_settings are set... if not, refer to default_settings
 MakeCss([
@@ -90,6 +92,7 @@ $(document).ready(function(){
 });
 
 var Program = function(){
+	KillProcesses();
 	if (window.location.href.indexOf("watch") > -1){
 		qualities = [];
 		var exempt = ["1080p (no audio)", "480p (no audio)"];
@@ -111,7 +114,7 @@ var Program = function(){
 				var ignoreMuted = (global_settings.ignoreMuted && text.indexOf('no audio') !== -1);
 				var ignoreAudio = (text.indexOf('audio only') !== -1);
 				var hidden = (ignoreMuted || ignoreAudio) ? true : false;
-				if (reqAudio.indexOf(Number(val)) > -1) hidden = false, requiresAudio = true, text = text.replace(" (no audio)", "*");
+				if (reqAudio.indexOf(Number(val)) > -1) hidden = false, requiresAudio = true, text = text.replace(" (no audio)", "") + "*";
 				qualities.push({val:val, link:link, text:text, type:type, hidden:hidden, requiresAudio:requiresAudio, label:label});
 			});
 			var v = window.location.href.split("?v=")[1].split("&")[0];
@@ -162,7 +165,8 @@ var Program = function(){
 		if (link.split('#').length > 1 && link.split("youtube").length > 1){
 	        var settings = JSON.parse(link.split("#")[1].replace(/\%22/g,'"').replace(/%0D/g, "")); //settings is an object including title, remain, link, host, downloadTo
 	        $('body').remove(); //Stop video
-	        link = link+"&title="+encodeURIComponent(settings.title);
+	        settings.title = decodeURIComponent(settings.title);
+	        link = link.split("#")[0]+"&title="+encodeURIComponent(settings.title);
 	        SaveToDisk(link, settings); //Save
 	        window.parent.postMessage({origin:settings.host, id:settings.id}, settings.host);
 	    }
@@ -217,7 +221,8 @@ function YQL(youtubeURL, callback){ //Makes a call the YQL console with the give
 	Interval.prototype.getCheck = function(){
         this.req.abort();
         this.exec += 1;
-        if (this.exec > 1){
+        if (this.exec > 2){
+        	$("#downloadBtn").html("Error Fetching").prepend($downloadIcon);
         	console.log("YQL Error please");
         	this.kill();
         } else {
@@ -227,7 +232,7 @@ function YQL(youtubeURL, callback){ //Makes a call the YQL console with the give
 	};
 	Interval.prototype.makeGetInterval = function(){
 		var _this = this;
-		this.interval = setInterval(function(){ _this.getCheck()}, 4000);
+		this.interval = setInterval(function(){ _this.getCheck()}, 3000);
 		this.makeRequest();
 	};
 	Interval.prototype.makeRequest = function(){
@@ -241,6 +246,7 @@ function YQL(youtubeURL, callback){ //Makes a call the YQL console with the give
 		});
 	};
     var interval = new Interval({'callback':callback, 'buttonId':'downloadBtn', 'make':'makeGetInterval', 'youtubeURL':youtubeURL});
+    processes.push(interval);
     interval[interval.make]();
 }
 
@@ -263,12 +269,13 @@ function GetVid(link, type, requiresAudio, label, mp3){ //Force the download to 
 	if (type === 'mp4' && requiresAudio) type = 'm4v';
     var host = GetHost();
 	var title = GetTitle(label);
-    var settings = {"title":title, "host":host, "type":type, "id":idCount, "label":label};
-  	if (link.split("title").length > 1) link = link.getAfter("title=", "&");
-  	if (!mp3) link = link + "#" + JSON.stringify(settings);
+    var settings = {"title":encodeURIComponent(title), "host":host, "type":type, "id":idCount, "label":label};
+  	  	console.log(link);
+
+  	if (link.split("title").length > 1) link = link.getAfter("&title=", "&");
 
     var $iframe = $("<iframe>", { //Send video to other script to be downloaded.
-        src: link,
+        src: link+"#"+JSON.stringify(settings),
         style: "width:0;height:0",
         id: idCount
     });
@@ -284,16 +291,17 @@ function GetVid(link, type, requiresAudio, label, mp3){ //Force the download to 
  	Interval.prototype.iframeCheck = function(){ //this.id should refer to the id of the iframe (iframeId)
 	    ($("#"+this.id).length > 0) ? $('#'+this.id).attr("src", $('#'+this.id).attr("src")) : this.kill();
 	    this.exec += 1;
-	    if (this.exec > 1 && global_settings.debug){
+	    if (this.exec > 2 && global_settings.debug){
 	    	console.log("HEUSTON, we have a problem");
 		}
     };
     Interval.prototype.makeIframeInterval = function(){
     	var _this = this;
-		this.interval = setInterval(function(){ _this.iframeCheck()}, 4000);
+		this.interval = setInterval(function(){ _this.iframeCheck()}, 6000);
 	};
 
     var interval = new Interval({id:idCount-1, title:title, make:'makeIframeInterval'});
+    processes.push(interval);
     interval[interval.make]();
     if (requiresAudio === 'true') HandleAudio(settings, type);
 }
@@ -366,7 +374,7 @@ function MakeScript(title, type1, type2, type3){
 
 function SaveToDisk(link, settings){
     var save = document.createElement('a');
-    save.href = link.split("#")[0];
+    save.href = link;
     save.target = '_blank';
     save.download = settings.title+"."+settings.type || 'unknown';
     (document.body || document.documentElement).appendChild(save);
@@ -516,4 +524,12 @@ function LockScroll($element){
             e.preventDefault();
         }
     });
+}
+
+function KillProcesses(){
+	for (i = 0; i<processes.length; i++){
+		processes[i].kill();
+		processes.splice(i, 1);
+		i--;
+	}
 }
