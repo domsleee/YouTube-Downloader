@@ -25,19 +25,19 @@
 //4. Iframe Handler - Handles the iframe post events
 
 Storage.prototype.setObject = function(key, value){ //Set JSON localstorage
-    this.setItem(key, JSON.stringify(value));
+	this.setItem(key, JSON.stringify(value));
 };
 
 Storage.prototype.getObject = function(key){ //Retrieve JSON localstorage
-    var value = this.getItem(key);
-    return value && JSON.parse(value);
+	var value = this.getItem(key);
+	return value && JSON.parse(value);
 };
 
 String.prototype.getAfter = function(a, b){
 	var str_a = this.split(a)[0];
 	var str_b = this.split(a)[1].split(b);
-    str_b.splice(0, 1);
-    var c = (str_b.length === 0) ? "" : b;
+	str_b.splice(0, 1);
+	var c = (str_b.length === 0) ? "" : b;
 	return str_a + c + str_b.join(b);
 };
 
@@ -61,10 +61,10 @@ var idCount = 0; //A counter to ensure unique IDs on iframes
 var qualities = []; //Quality options
 var global_settings = localStorage.getObject('global_settings') || {};
 var default_setings = { //Default settings
-    'quality':72060000, //Quality selected
-    'ignoreMuted':true, //Ignore muted
-    'type':'mp4',       //Default type
-    'label':true        //Have quality label on download
+	'quality':72060000, //Quality selected
+	'ignoreMuted':true, //Ignore muted
+	'type':'mp4',       //Default type
+	'label':true        //Have quality label on download
 };
 var audios = [128, 192, 256];
 var processes = [];
@@ -82,7 +82,7 @@ MakeCss([
 	"#downIcon{ position:relative;display:inline-block;border-width:5px;border-style:solid;border-color:rgb(134, 130, 130) transparent transparent;margin-left:0 6px}",
 	"ul#options{ background-color:white;z-index:500;width:150px;cursor:default}",
 	"ul#options li:hover{ background-color:green}"
-]);
+	]);
 var $downloadIcon = $("<img>", {style:'margin-right:4.5px', class:'midalign', src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA3ElEQVQ4T6WT7RHBQBCGn1RAB3RAB6hAVEA6oAI6QAdK0AE6oIOkAx0wb+bO7NxskjHZP7m53ffZj9tk9LSsp542wBgYhQQv4O0l8wBD4AhsEsEF2KUgD/AEJg2tybewEAvIgTWgb5upilMMiIArsExUD2Ae7u7ALJxLYAWomnqIB2DvpGwCxFAlLQTwepZY99sQrZKnpooIOQvwcbJr4oXzCpqRtVIA2591WojOqVixlQAa1K1h7BIqxhNLUrcg09Koz8Efq6055ekixWfr4mitf8/YFdzq7/03fgFd3CYQgbnh+gAAAABJRU5ErkJggg=="});
 var $downArrow = $("<img>", {style:'margin-left:6px;', class:'midalign', src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAAV0lEQVQoU2NkIBEwkqiegXQNc+fOTWBkZJxPjE3///9PBNtAjCaQ4uTk5AVwJ+HTBFMMMhzFD9g0ISvG0IDuPHTFWDXANIFokJvRA4P0YCUmOJHVkGwDAPVTKkQsO0MlAAAAAElFTkSuQmCC"});
 
@@ -159,30 +159,30 @@ var Program = function(){
 				}
 			});
 		});
-	/* ---------------  PART II, the external handler  --------------------- */
-	} else if (window.location.href.indexOf("google") > -1 && window.location.href.indexOf("youtube") > -1){
-		var link = window.location.href;
-		if (link.split('#').length > 1 && link.split("youtube").length > 1){
-	        var settings = JSON.parse(link.split("#")[1].replace(/\%22/g,'"').replace(/%0D/g, "")); //settings is an object including title, remain, link, host, downloadTo
-	        $('body').remove(); //Stop video
-	        settings.title = decodeURIComponent(settings.title);
-	        link = link.split("#")[0]+"&title="+encodeURIComponent(settings.title);
-	        SaveToDisk(link, settings); //Save
-	        $(window).ready(function(){
-	        	window.parent.postMessage({origin:settings.host, id:settings.id.toString()}, settings.host);
-	        });
-	    }
+/* ---------------  PART II, the external handler  --------------------- */
+} else if (window.location.href.indexOf("google") > -1 && window.location.href.indexOf("youtube") > -1){
+	var link = window.location.href;
+	if (link.split('#').length > 1 && link.split("youtube").length > 1){
+			var settings = JSON.parse(link.split("#")[1].replace(/\%22/g,'"').replace(/%0D/g, "")); //settings is an object including title, remain, link, host, downloadTo
+			$('body').remove(); //Stop video
+			settings.title = decodeURIComponent(settings.title);
+			link = link.split("#")[0]+"&title="+encodeURIComponent(settings.title);
+			SaveToDisk(link, settings); //Save
+			$(window).ready(function(){
+				window.parent.postMessage({origin:settings.host, id:settings.id.toString()}, settings.host);
+			});
+		}
 
-	/* ---------------  PART III, MP3 Handler  --------------------- */	
+		/* ---------------  PART III, MP3 Handler  --------------------- */	
 	} else if (window.location.href.indexOf("peggo") > -1){
 		$(document).ready(function(){
 			var lightbox = new Lightbox("Notice", $("<div>", {style:'margin-bottom:1em', html:"This is a (hopefully) temporary solution. The problem is that YouTube uses the HTTPS protocol, whereas this site uses HTTP. As such, Javascript CANNOT embed this site in YouTube, hence leaving the only solution: To open the site in a new window</p><p>Anyway, this will close in 10 seconds</p>"}));
 			lightbox.enable();
 			new timeout({range:[0, 11], time:1, callback:function(i){ //execute a for loop for range, execute every certain amount of seconds
-		        var lightbox = new Lightbox("Notice", $("<div>", {html:(10-i)+"..."}));
-		        $("title").text(10-i+" seconds remaining");
-		        if (i === 10) self.close();
-		    }});
+				var lightbox = new Lightbox("Notice", $("<div>", {html:(10-i)+"..."}));
+				$("title").text(10-i+" seconds remaining");
+				if (i === 10) self.close();
+			}});
 			$("#audio-bitrate-select").val(window.location.href.split("&q=")[1]);
 			$("#record-audio").get(0).click();
 
@@ -193,21 +193,21 @@ var Program = function(){
 if (window.location.href.indexOf("watch") === -1) return;
 /* ----------------- PART IV, iframe Handler ---------------------- */
 $(document).ready(function(){
-    var eventMethod = window.addEventListener ? "addEventListener" : "attachEvent";
-    var eventer = window[eventMethod];
-    var messageEvent = (eventMethod === "attachEvent") ? "onmessage" : "message";
+	var eventMethod = window.addEventListener ? "addEventListener" : "attachEvent";
+	var eventer = window[eventMethod];
+	var messageEvent = (eventMethod === "attachEvent") ? "onmessage" : "message";
 
-    // Listen to message from child IFrame window
-    $(window).on(messageEvent, function(e){
-    	var e = e.originalEvent;
-        if (e.origin){
-            if (e.origin.split('docs.google').length > 1 || e.origin.split("googlevideo").length > 1){
-            	remain--;
-                $("#"+e.data.id.toString()).remove();
-            	if (remain === 0) $("#downloadBtn").onState(), idCount = 0;    
-            }
-        }
-    }); 
+	// Listen to message from child IFrame window
+	$(window).on(messageEvent, function(e){
+		var e = e.originalEvent;
+		if (e.origin){
+			if (e.origin.split('docs.google').length > 1 || e.origin.split("googlevideo").length > 1){
+				remain--;
+				$("#"+e.data.id.toString()).remove();
+				if (remain === 0) $("#downloadBtn").onState(), idCount = 0;    
+			}
+		}
+	}); 
 });
 
 // Window change link listener
@@ -222,16 +222,16 @@ setInterval(function(){
 
 function YQL(youtubeURL, callback){ //Makes a call the YQL console with the given youtubeURL
 	Interval.prototype.getCheck = function(){
-        this.req.abort();
-        this.exec += 1;
-        if (this.exec > 9){
-        	$("#downloadBtn").html("Error Fetching").prepend($downloadIcon);
-        	console.log("YQL Error please");
-        	this.kill();
-        } else {
-        	$("#downloadBtn").html("Loading...("+(this.exec+1)+")").prepend($downloadIcon);
-            this.makeRequest();
-        }
+		this.req.abort();
+		this.exec += 1;
+		if (this.exec > 9){
+			$("#downloadBtn").html("Error Fetching").prepend($downloadIcon);
+			console.log("YQL Error please");
+			this.kill();
+		} else {
+			$("#downloadBtn").html("Loading...("+(this.exec+1)+")").prepend($downloadIcon);
+			this.makeRequest();
+		}
 	};
 	Interval.prototype.makeGetInterval = function(){
 		var _this = this;
@@ -248,63 +248,63 @@ function YQL(youtubeURL, callback){ //Makes a call the YQL console with the give
 			callback(xhr);
 		});
 	};
-    var interval = new Interval({'callback':callback, 'buttonId':'downloadBtn', 'make':'makeGetInterval', 'youtubeURL':youtubeURL});
-    processes.push(interval);
-    interval[interval.make]();
+	var interval = new Interval({'callback':callback, 'buttonId':'downloadBtn', 'make':'makeGetInterval', 'youtubeURL':youtubeURL});
+	processes.push(interval);
+	interval[interval.make]();
 }
 
 function HandleText(text){ //Return the correct text
 	text = text.replace(/(\r\n|\n|\r)/g,"");
 	text = (text.split("x").length > 1) ? text.split("x")[1]+"p" : text;
 	if (text.split("60 fps").length > 1) text = text.split(" (")[0] + "60";
-	return text;
-}
+		return text;
+	}
 function HandleVal(val, text, type, exempt){ //Return the correct value
 	if (text.split("p60").length > 1) val += 60;
 	if (type === 'mp4') val *= 1000;
 	for (i = 0; i<exempt.length; i++) if (text.indexOf(exempt[i]) !== -1) return val;
-	if (text.split("no audio").length > 1) val /= 10000;
+		if (text.split("no audio").length > 1) val /= 10000;
 	if (isNaN(val)) val = -1;
 	return val;
 }
 
 function GetVid(link, type, requiresAudio, label, mp3){ //Force the download to be started from an iframe
 	if (type === 'mp4' && requiresAudio) type = 'm4v';
-    var host = GetHost();
+	var host = GetHost();
 	var title = GetTitle(label);
-    var settings = {"title":encodeURIComponent(title), "host":host, "type":type, "id":idCount, "label":label};
-  	if (link.split("title").length > 1) link = link.getAfter("&title=", "&");
+	var settings = {"title":encodeURIComponent(title), "host":host, "type":type, "id":idCount, "label":label};
+	if (link.split("title").length > 1) link = link.getAfter("&title=", "&");
 
-    var $iframe = $("<iframe>", { //Send video to other script to be downloaded.
-        src: link+"#"+JSON.stringify(settings),
-        style: "width:0;height:0",
-        id: idCount
-    });
-    if (mp3){
-    	window.open(link,'Closing in 10 seconds');
-    	setTimeout(function(){ $("#downloadBtn").onState()}, 1500);
-    } else {
-    	$("body").append($iframe);
-    	idCount++;
-    	remain ++;
-    }
+	var $iframe = $("<iframe>", { //Send video to other script to be downloaded.
+		src: link+"#"+JSON.stringify(settings),
+		style: "width:0;height:0",
+		id: idCount
+	});
+	if (mp3){
+		window.open(link,'Closing in 10 seconds');
+		setTimeout(function(){ $("#downloadBtn").onState()}, 1500);
+	} else {
+		$("body").append($iframe);
+		idCount++;
+		remain ++;
+	}
 
- 	Interval.prototype.iframeCheck = function(){ //this.id should refer to the id of the iframe (iframeId)
-	    ($("#"+this.id).length > 0) ? $('#'+this.id).attr("src", $('#'+this.id).attr("src")) : this.kill();
-	    this.exec += 1;
-	    if (this.exec > 4){
-	    	console.log("HEUSTON, we have a problem");
+	Interval.prototype.iframeCheck = function(){ //this.id should refer to the id of the iframe (iframeId)
+		($("#"+this.id).length > 0) ? $('#'+this.id).attr("src", $('#'+this.id).attr("src")) : this.kill();
+		this.exec += 1;
+		if (this.exec > 4){
+			console.log("HEUSTON, we have a problem");
 		}
-    };
-    Interval.prototype.makeIframeInterval = function(){
-    	var _this = this;
+	};
+	Interval.prototype.makeIframeInterval = function(){
+		var _this = this;
 		this.interval = setInterval(function(){ _this.iframeCheck()}, 7000);
 	};
 
-    var interval = new Interval({id:idCount-1, title:title, make:'makeIframeInterval'});
-    processes.push(interval);
-    interval[interval.make]();
-    if (requiresAudio === 'true') HandleAudio(settings, type);
+	var interval = new Interval({id:idCount-1, title:title, make:'makeIframeInterval'});
+	processes.push(interval);
+	interval[interval.make]();
+	if (requiresAudio === 'true') HandleAudio(settings, type);
 }
 
 function Interval(params){
@@ -318,7 +318,7 @@ function Interval(params){
 }
 Interval.prototype.kill = function(remove){
 	clearInterval(this.interval);
-    this.active = false;
+	this.active = false;
 };
 Interval.prototype.resume = function(){
 	this.exec = 0;
@@ -326,8 +326,8 @@ Interval.prototype.resume = function(){
 };
 
 function GetHost(){
-    split = ".com";
-    return window.location.href.split(split)[0]+split;
+	split = ".com";
+	return window.location.href.split(split)[0]+split;
 }
 
 function GetTitle(label){
@@ -369,21 +369,21 @@ function MakeScript(title, type1, type2, type3){
 	":end",
 	"timeout /t 3 >nul",
 	"(goto) 2>nul & del \"%~f0\""];       
-	
+
 	var text = new Blob([script.join("\r\n")], {"type":"application/bat"});
 	return text;
 }
 
 function SaveToDisk(link, settings){
-    var save = document.createElement('a');
-    save.href = link;
-    save.target = '_blank';
-    save.download = settings.title+"."+settings.type || 'unknown';
-    (document.body || document.documentElement).appendChild(save);
-    save.onclick = function() {
-        (document.body || document.documentElement).removeChild(save);
-    };
-    save.click();
+	var save = document.createElement('a');
+	save.href = link;
+	save.target = '_blank';
+	save.download = settings.title+"."+settings.type || 'unknown';
+	(document.body || document.documentElement).appendChild(save);
+	save.onclick = function() {
+		(document.body || document.documentElement).removeChild(save);
+	};
+	save.click();
 }
 
 function SortQualities($quality, $options){
@@ -436,23 +436,23 @@ function QualitySort(a, b){
 }
 
 function MakeCss(cssArray){
-    $("<style type='text/css'>"+cssArray.join("\n")+"</style>").appendTo("head");
+	$("<style type='text/css'>"+cssArray.join("\n")+"</style>").appendTo("head");
 }
 
 //Global settings handling
 function SetupGlobalSettings(){
 	for (var key in default_setings){
-	    if (default_setings.hasOwnProperty(key)){
-	        if (global_settings[key] === undefined || global_settings[key] === null){
-	            global_settings[key] = default_setings[key];
-	        }
-	    }
+		if (default_setings.hasOwnProperty(key)){
+			if (global_settings[key] === undefined || global_settings[key] === null){
+				global_settings[key] = default_setings[key];
+			}
+		}
 	}
 	UpdateGlobalSettings();
 }
 
 function UpdateGlobalSettings(){
-    localStorage.setObject('global_settings', global_settings);
+	localStorage.setObject('global_settings', global_settings);
 }
 
 function timeout(params){
@@ -462,65 +462,65 @@ function timeout(params){
 			this[key] = this.params[key];
 		}
 	}
-    this.loop = function(){
-        this.callback(this.range[0]);
-        var _this = this;
-        setTimeout(function(){
-            _this.range[0]++;
-            if (_this.range[0]<_this.range[1]){
-                _this.loop();
-            }
-        }, this.time*1000);
-    };
-    this.loop();
+	this.loop = function(){
+		this.callback(this.range[0]);
+		var _this = this;
+		setTimeout(function(){
+			_this.range[0]++;
+			if (_this.range[0]<_this.range[1]){
+				_this.loop();
+			}
+		}, this.time*1000);
+	};
+	this.loop();
 }
 
 function Lightbox(id, $container, params){
-    var params = params || {};
-    var count = (params.count) ? "_"+params.count.toString() : "";
-    var _this = this;
-    this.enable = function(){
-        $("#"+id+count+"_box").show();
-        $("#"+id+count+"_content").show();
-    };
-    this.disable = function(){
-        $("#"+id+count+"_box").hide();
-        $("#"+id+count+"_content").hide();
-    };
+	var params = params || {};
+	var count = (params.count) ? "_"+params.count.toString() : "";
+	var _this = this;
+	this.enable = function(){
+		$("#"+id+count+"_box").show();
+		$("#"+id+count+"_content").show();
+	};
+	this.disable = function(){
+		$("#"+id+count+"_box").hide();
+		$("#"+id+count+"_content").hide();
+	};
 
-    var $content = $("<div>").append("<h1 class='coolfont' style='font-size:1.5em;padding:0.5em;text-align:center'>"+id+"</h1>");
-    $content.append($container);
-    LockScroll($container);
+	var $content = $("<div>").append("<h1 class='coolfont' style='font-size:1.5em;padding:0.5em;text-align:center'>"+id+"</h1>");
+	$content.append($container);
+	LockScroll($container);
 
-    this.closeHandle = function(e){
-        e.data._this.disable();
-    };
-    
-    var $box = $("<div>", {
-        style:"display:none;width:100%;height:150%;top:-25%;position:fixed;background-color:black;opacity:0.8;z-index:99",
-        id:id+count+'_box'
-    }).click({_this:_this, params:params}, this.closeHandle);
-    
-    $content.css("margin", "0.5em 1em").addClass("unselectable");
-    var $wrap = $("<div>", {
-        id:id+count+"_content",
-        style:"color:black;display:none;background-color:white;position:fixed;width:400px;height:300px;margin:auto;left:0;right:0;top:30%;border:1px solid #999999;z-index:100"
-    }).append($content);
-    
-    if ($("#"+id+"_content").length === 0) {
-    	$("body").append($box).append($wrap);
-    } else {
-    	$("#"+id+"_content div").html($("#"+id+"_content div").html()+$container.html());
-    }
+	this.closeHandle = function(e){
+		e.data._this.disable();
+	};
+
+	var $box = $("<div>", {
+		style:"display:none;width:100%;height:150%;top:-25%;position:fixed;background-color:black;opacity:0.8;z-index:99",
+		id:id+count+'_box'
+	}).click({_this:_this, params:params}, this.closeHandle);
+
+	$content.css("margin", "0.5em 1em").addClass("unselectable");
+	var $wrap = $("<div>", {
+		id:id+count+"_content",
+		style:"color:black;display:none;background-color:white;position:fixed;width:400px;height:300px;margin:auto;left:0;right:0;top:30%;border:1px solid #999999;z-index:100"
+	}).append($content);
+
+	if ($("#"+id+"_content").length === 0) {
+		$("body").append($box).append($wrap);
+	} else {
+		$("#"+id+"_content div").html($("#"+id+"_content div").html()+$container.html());
+	}
 }
 
 function LockScroll($element){
-    $element.bind("mousewheel DOMMouseScroll", function(e){
-        var up = (e.originalEvent.wheelDelta > 0 || e.originalEvent.detail < 0);
-        if ((Math.abs(this.scrollTop - (this.scrollHeight - $(this).height())) < 2 && !up) || (this.scrollTop === 0 && up)){
-            e.preventDefault();
-        }
-    });
+	$element.bind("mousewheel DOMMouseScroll", function(e){
+		var up = (e.originalEvent.wheelDelta > 0 || e.originalEvent.detail < 0);
+		if ((Math.abs(this.scrollTop - (this.scrollHeight - $(this).height())) < 2 && !up) || (this.scrollTop === 0 && up)){
+			e.preventDefault();
+		}
+	});
 }
 
 function KillProcesses(){
