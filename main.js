@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Downloader
 // @namespace    https://greasyfork.org/users/10036
-// @version      0.05
+// @version      0.06
 // @description  Download 60fps MP4 videos and 256kbps MP3 audio from YouTube
 // @author       D. Slee
 // @icon         http://youtube.com/favicon.ico
@@ -192,8 +192,8 @@ var Program = function(){
 };
 
 /* ----------------- PART IV, iframe Handler ---------------------- */
+if (window.location.href.indexOf("youtube") === -1) return;
 $(document).ready(function(){
-	if (window.location.href.indexOf("watch") === -1) return;
 	var eventMethod = window.addEventListener ? "addEventListener" : "attachEvent";
 	var eventer = window[eventMethod];
 	var messageEvent = (eventMethod === "attachEvent") ? "onmessage" : "message";
