@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Downloader
 // @namespace    https://greasyfork.org/users/10036
-// @version      0.03
+// @version      0.04
 // @description  Download 60fps MP4 videos and 256kbps MP3 audio from YouTube
 // @author       D. Slee
 // @icon         http://youtube.com/favicon.ico
@@ -224,7 +224,7 @@ function YQL(youtubeURL, callback){ //Makes a call the YQL console with the give
 	Interval.prototype.getCheck = function(){
         this.req.abort();
         this.exec += 1;
-        if (this.exec > 4){
+        if (this.exec > 9){
         	$("#downloadBtn").html("Error Fetching").prepend($downloadIcon);
         	console.log("YQL Error please");
         	this.kill();
@@ -332,7 +332,7 @@ function GetHost(){
 
 function GetTitle(label){
 	var label = (label) ? label : "";
-	var str = $("title").html().split(" - YouTube")[0].replace(/"/g, "").replace(/'/g, '').replace(/\?/g, '').replace(/:/g, '').replace(/\*/g, '-').replace(/\!/g, '');
+	var str = $("title").html().split(" - YouTube")[0].replace(/"/g, "").replace(/'/g, '').replace(/\?/g, '').replace(/:/g, '').replace(/\*/g, '-').replace(/%/g, '');
 	if (global_settings.label) str = str+" "+label.toString();
 	return str;
 }
