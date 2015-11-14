@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Downloader
 // @namespace    https://greasyfork.org/users/10036
-// @version      0.01
+// @version      0.02
 // @description  Download 60fps MP4 videos and 256kbps MP3 audio from YouTube
 // @author       D. Slee
 // @icon         http://youtube.com/favicon.ico
@@ -86,10 +86,18 @@ var $downArrow = $("<img>", {style:'margin-left:6px;', class:'midalign', src:"da
 
 /* -----------------  PART I, the local handler  ----------------------- */
 $(document).ready(function(){
+	Program();
+});
+
+var Program = function(){
 	if (window.location.href.indexOf("watch") > -1){
 		var exempt = ["1080p (no audio)", "480p (no audio)"];
 		var reqAudio = [72060, 72060000, 108060, 108060000, 1080, 1080000, 480, 480000];
+		$("#options").remove();
+		$downBtn = $("<button>", {id:"downloadBtn", text:"Loading...", class:"disabled"}).prepend($downloadIcon);
+		$("#watch7-subscription-container").append($("<span>", {id:'downloadBtnCont', class:'unselectable'}).append($downBtn));
 		YQL(window.location.href, function(xhr){
+			$("#downloadBtnCont").remove();
 			var $iframe = $(xhr);
 			var $rows = $iframe.find("tbody tr");
 			$rows.each(function(){
@@ -173,7 +181,7 @@ $(document).ready(function(){
 
 		});
 	}
-});
+};
 
 if (window.location.href.indexOf("watch") === -1) return;
 /* ----------------- PART IV, iframe Handler ---------------------- */
@@ -188,16 +196,50 @@ $(document).ready(function(){
             if (e.origin.split('docs.google').length > 1 || e.origin.split("googlevideo").length > 1){
             	remain--;
                 $("#"+e.data.id.toString()).remove();
-            	if (remain === 0) $("#downloadBtn").onState();    
+            	if (remain === 0) $("#downloadBtn").onState(), idCount = 0;    
             }
         }
     }, false); 
 });
 
+// Window change link listener
+var lastHref = window.location.href;
+setInterval(function(){
+	if (lastHref !== window.location.href){
+		setTimeout(function(){ Program();}, 1500);
+		lastHref = window.location.href;
+	}
+}, 100);
+
 function YQL(youtubeURL, callback){ //Makes a call the YQL console with the given youtubeURL
-	$.get("https://query.yahooapis.com/v1/public/yql", {
-		q:"SELECT * FROM html WHERE url='https://www.savedeo.com/download?url="+encodeURIComponent(youtubeURL)+"'"
-	}, callback);
+	Interval.prototype.getCheck = function(){
+        this.req.abort();
+        this.exec += 1;
+        if (this.exec > 1){
+        	console.log("YQL Error please");
+        	this.kill();
+        } else {
+        	$("#downloadBtn").html("Loading...("+(this.exec+1)+")").prepend($downloadIcon);
+            this.makeRequest();
+        }
+	};
+	Interval.prototype.makeGetInterval = function(){
+		var _this = this;
+		this.interval = setInterval(function(){ _this.getCheck()}, 4000);
+		this.makeRequest();
+	};
+	Interval.prototype.makeRequest = function(){
+		var _this = this;
+		this.req = $.get("https://query.yahooapis.com/v1/public/yql", {
+			q:"SELECT * FROM html WHERE url='https://www.savedeo.com/download?url="+encodeURIComponent(this.youtubeURL)+"'"
+		}, function(xhr){
+			if ($(xhr).find("tbody tr").length === 0) return;
+			_this.kill();
+			callback(xhr);
+		});
+	};
+    var interval = new Interval({'callback':callback, 'buttonId':'downloadBtn', 'make':'makeGetInterval', 'youtubeURL':youtubeURL});
+    interval[interval.make]();
 }
 
 function HandleText(text){ //Return the correct text
@@ -287,7 +329,7 @@ function GetTitle(label){
 function HandleAudio(settings, type){
 	GetVid($("#options").find("li:contains('m4a')").attr("link"), "m4a", false, settings.label);
 	var text = MakeScript(settings.title, type, "m4a", "mp4");
-	settings.type = "bat"
+	settings.type = "bat";
 	SaveToDisk(URL.createObjectURL(text), settings);
 }
 
