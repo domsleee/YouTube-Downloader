@@ -168,7 +168,9 @@ var Program = function(){
 	        settings.title = decodeURIComponent(settings.title);
 	        link = link.split("#")[0]+"&title="+encodeURIComponent(settings.title);
 	        SaveToDisk(link, settings); //Save
-	        window.parent.postMessage({origin:settings.host, id:settings.id}, settings.host);
+	        $(window).ready(function(){
+	        	window.parent.postMessage({origin:settings.host, id:settings.id.toString()}, settings.host);
+	        });
 	    }
 
 	/* ---------------  PART III, MP3 Handler  --------------------- */	
@@ -196,7 +198,8 @@ $(document).ready(function(){
     var messageEvent = (eventMethod === "attachEvent") ? "onmessage" : "message";
 
     // Listen to message from child IFrame window
-    eventer(messageEvent, function(e){
+    $(window).on(messageEvent, function(e){
+    	var e = e.originalEvent;
         if (e.origin){
             if (e.origin.split('docs.google').length > 1 || e.origin.split("googlevideo").length > 1){
             	remain--;
@@ -204,7 +207,7 @@ $(document).ready(function(){
             	if (remain === 0) $("#downloadBtn").onState(), idCount = 0;    
             }
         }
-    }, false); 
+    }); 
 });
 
 // Window change link listener
@@ -221,7 +224,7 @@ function YQL(youtubeURL, callback){ //Makes a call the YQL console with the give
 	Interval.prototype.getCheck = function(){
         this.req.abort();
         this.exec += 1;
-        if (this.exec > 2){
+        if (this.exec > 4){
         	$("#downloadBtn").html("Error Fetching").prepend($downloadIcon);
         	console.log("YQL Error please");
         	this.kill();
@@ -232,7 +235,7 @@ function YQL(youtubeURL, callback){ //Makes a call the YQL console with the give
 	};
 	Interval.prototype.makeGetInterval = function(){
 		var _this = this;
-		this.interval = setInterval(function(){ _this.getCheck()}, 3000);
+		this.interval = setInterval(function(){ _this.getCheck()}, 4000);
 		this.makeRequest();
 	};
 	Interval.prototype.makeRequest = function(){
@@ -270,8 +273,6 @@ function GetVid(link, type, requiresAudio, label, mp3){ //Force the download to 
     var host = GetHost();
 	var title = GetTitle(label);
     var settings = {"title":encodeURIComponent(title), "host":host, "type":type, "id":idCount, "label":label};
-  	  	console.log(link);
-
   	if (link.split("title").length > 1) link = link.getAfter("&title=", "&");
 
     var $iframe = $("<iframe>", { //Send video to other script to be downloaded.
@@ -291,13 +292,13 @@ function GetVid(link, type, requiresAudio, label, mp3){ //Force the download to 
  	Interval.prototype.iframeCheck = function(){ //this.id should refer to the id of the iframe (iframeId)
 	    ($("#"+this.id).length > 0) ? $('#'+this.id).attr("src", $('#'+this.id).attr("src")) : this.kill();
 	    this.exec += 1;
-	    if (this.exec > 2 && global_settings.debug){
+	    if (this.exec > 4){
 	    	console.log("HEUSTON, we have a problem");
 		}
     };
     Interval.prototype.makeIframeInterval = function(){
     	var _this = this;
-		this.interval = setInterval(function(){ _this.iframeCheck()}, 6000);
+		this.interval = setInterval(function(){ _this.iframeCheck()}, 7000);
 	};
 
     var interval = new Interval({id:idCount-1, title:title, make:'makeIframeInterval'});
@@ -331,13 +332,14 @@ function GetHost(){
 
 function GetTitle(label){
 	var label = (label) ? label : "";
-	var str = $("title").html().split(" - YouTube")[0].replace(/"/g, "").replace(/'/g, '').replace(/\?/g, '').replace(/:/g, '');
+	var str = $("title").html().split(" - YouTube")[0].replace(/"/g, "").replace(/'/g, '').replace(/\?/g, '').replace(/:/g, '').replace(/\*/g, '-').replace(/\!/g, '');
 	if (global_settings.label) str = str+" "+label.toString();
 	return str;
 }
 
 function HandleAudio(settings, type){
 	GetVid($("#options").find("li:contains('m4a')").attr("link"), "m4a", false, settings.label);
+	settings.title = decodeURIComponent(settings.title);
 	var text = MakeScript(settings.title, type, "m4a", "mp4");
 	settings.type = "bat";
 	SaveToDisk(URL.createObjectURL(text), settings);
@@ -352,8 +354,8 @@ function MakeScript(title, type1, type2, type3){
 	"if errorlevel 1 (goto error) else (goto success)",
 
 	":error",
-	"echo. &echo ERROR: Oh noes! Either: &echo. &echo You don't have ffmpeg installed &echo. &echo Some weird codec error &echo. &echo Something completely random &echo. &echo. &echo Please notify developer at GreasyFork.",
-	"echo. &echo Retrying in 10 seconds",
+	"echo. &echo ERROR: Oh noes! Either: &echo. &echo You don't have ffmpeg installed &echo. &echo Your files haven't finished downloading &echo. &echo Some weird codec error &echo. &echo Something completely random &echo. &echo. &echo Please notify developer at GreasyFork.",
+	"echo. &echo. &echo Retrying in 10 seconds",
 	"timeout /t 10 >nul",
 	"goto start",
 
@@ -381,12 +383,7 @@ function SaveToDisk(link, settings){
     save.onclick = function() {
         (document.body || document.documentElement).removeChild(save);
     };
-    var mouseEvent = new MouseEvent('click', {
-        view: window,
-        bubbles: true,
-        cancelable: true
-    });
-    save.dispatchEvent(mouseEvent);
+    save.click();
 }
 
 function SortQualities($quality, $options){
