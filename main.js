@@ -192,38 +192,39 @@ var Program = function(){
 };
 
 /* ----------------- PART IV, iframe Handler ---------------------- */
-if (window.location.href.indexOf("youtube") === -1) return;
-$(document).ready(function(){
-	var eventMethod = window.addEventListener ? "addEventListener" : "attachEvent";
-	var eventer = window[eventMethod];
-	var messageEvent = (eventMethod === "attachEvent") ? "onmessage" : "message";
+if (window.location.href.indexOf("youtube") !== -1){
+	$(document).ready(function(){
+		var eventMethod = window.addEventListener ? "addEventListener" : "attachEvent";
+		var eventer = window[eventMethod];
+		var messageEvent = (eventMethod === "attachEvent") ? "onmessage" : "message";
 
-	// Listen to message from child IFrame window
-	$(window).on(messageEvent, function(e){
-		var e = e.originalEvent;
-		if (e.origin){
-			if (e.origin.split('docs.google').length > 1 || e.origin.split("googlevideo").length > 1){
-				remain--;
-				$("#"+e.data.id.toString()).remove();
-				if (remain === 0) $("#downloadBtn").onState(), idCount = 0;    
+		// Listen to message from child IFrame window
+		$(window).on(messageEvent, function(e){
+			var e = e.originalEvent;
+			if (e.origin){
+				if (e.origin.split('docs.google').length > 1 || e.origin.split("googlevideo").length > 1){
+					remain--;
+					$("#"+e.data.id.toString()).remove();
+					if (remain === 0) $("#downloadBtn").onState(), idCount = 0;    
+				}
 			}
-		}
-	}); 
-});
+		}); 
+	});
 
-/* -------------- PART V, Window change Handler ------------------- */
-var lastHref = window.location.href;
-var lastVid = '';
-setInterval(function(){
-	if (lastHref !== window.location.href){
-		if (window.location.href.split("?v=").length === 1) return;
-		var newVid = window.location.href.split("?v=")[1].split("&")[0];
-		if (lastVid === newVid) return;
-		lastVid = newVid;
-		setTimeout(function(){ Program();}, 1500);
-		lastHref = window.location.href;
-	}
-}, 100);
+	/* -------------- PART V, Window change Handler ------------------- */
+	var lastHref = window.location.href;
+	var lastVid = '';
+	setInterval(function(){
+		if (lastHref !== window.location.href){
+			if (window.location.href.split("?v=").length === 1) return;
+			var newVid = window.location.href.split("?v=")[1].split("&")[0];
+			if (lastVid === newVid) return;
+			lastVid = newVid;
+			setTimeout(function(){ Program();}, 1500);
+			lastHref = window.location.href;
+		}
+	}, 100);
+}
 
 function YQL(youtubeURL, callback){ //Makes a call the YQL console with the given youtubeURL
 	Interval.prototype.getCheck = function(){
@@ -345,14 +346,26 @@ function GetTitle(label){
 function HandleAudio(settings, type){
 	GetVid($("#options").find("li:contains('m4a')").attr("link"), "m4a", false, settings.label);
 	settings.title = decodeURIComponent(settings.title);
-	var text = MakeScript(settings.title, type, "m4a", "mp4");
-	settings.type = "bat";
-	SaveToDisk(URL.createObjectURL(text), settings);
+	var os = GetOs();
+	var text = MakeScript(settings.title, type, "m4a", "mp4", os);
+	settings.type = os.scriptType;
+	if (os === 'win'){
+		SaveToDisk(URL.createObjectURL(text), settings);
+	} else {
+		SaveToDisk("https://github.com/Domination9987/YouTube-Downloader/raw/master/Muxer.zip", settings);
+	}
+	
 }
 
-function MakeScript(title, type1, type2, type3){
+function GetOs(){
+	var os = (navigator.appVersion.indexOf("Win") !== -1) ? "win" : "mac";
+	var scriptType = (os === 'win') ? 'bat' : 'command';
+	return {os:os, scriptType:scriptType};
+}
+
+function MakeScript(title, type1, type2, type3, os){
 	if (type1 === 'webm') type3 = 'avi';
-	var script = [
+	var batScript = [
 	"@echo off",
 	":start",
 	"ffmpeg -i \""+title+"."+type1+"\" -i \""+title+"."+type2+"\" -vcodec copy -acodec copy \""+title+"."+type3+"\"",
@@ -373,9 +386,9 @@ function MakeScript(title, type1, type2, type3){
 
 	":end",
 	"timeout /t 3 >nul",
-	"(goto) 2>nul & del \"%~f0\""];       
+	"(goto) 2>nul & del \"%~f0\""];
 
-	var text = new Blob([script.join("\r\n")], {"type":"application/bat"});
+	var text = new Blob([batScript.join("\r\n")], {"type":"application/"+os.scriptType});
 	return text;
 }
 

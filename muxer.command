@@ -1,8 +1,10 @@
 #!/bin/bash
 cd "$(dirname "$0")"
+ffmpeg="$(dirname "$0")/ffmpeg"
+cd ../../..
 
 function ffmpegcall {
-	ffmpeg -i "$1" -i "$2" -vcodec copy -acodec copy "$3"
+	$ffmpeg -i "$1" -i "$2" -vcodec copy -acodec copy "$3"
 	if [ $? -gt 0 ]; then
 		echo ERROR occurred when trying to mux using FFmpeg. This probably means that you don\'t have FFmpeg installed
 	else
