@@ -53,6 +53,7 @@ jQuery.fn.extend({
 	onState: function(){
 		if ($(this).hasClass("disabled")){
 			$(this).removeClass("disabled");
+			$(this).html("Download");
 		}
 	},
 });
@@ -230,6 +231,7 @@ function YQL(youtubeURL, callback){ //Makes a call the YQL console with the give
 	Interval.prototype.getCheck = function(){
 		this.req.abort();
 		this.exec += 1;
+		console.log("Checking get request for the "+this.exec+" time");
 		if (this.exec > 9){
 			$("#downloadBtn").html("Error Fetching").prepend($downloadIcon);
 			console.log("YQL Error please");
@@ -296,15 +298,18 @@ function GetVid(link, type, requiresAudio, label, mp3){ //Force the download to 
 	}
 
 	Interval.prototype.iframeCheck = function(){ //this.id should refer to the id of the iframe (iframeId)
-		($("#"+this.id).length > 0) ? $('#'+this.id).attr("src", $('#'+this.id).attr("src")) : this.kill();
+		var exist = ($("#"+this.id).length > 0);
+		(exist) ? $('#'+this.id).attr("src", $('#'+this.id).attr("src")) : this.kill()
 		this.exec += 1;
+		if (exist) $("#downloadBtn").html("Download ("+(this.exec+1)+")").prepend($downloadIcon);
+		console.log("Checking iframe "+this.id+" for the "+this.exec+" time");
 		if (this.exec > 4){
 			console.log("HEUSTON, we have a problem");
 		}
 	};
 	Interval.prototype.makeIframeInterval = function(){
 		var _this = this;
-		this.interval = setInterval(function(){ _this.iframeCheck()}, 7000);
+		this.interval = setInterval(function(){ _this.iframeCheck()}, 12000);
 	};
 
 	var interval = new Interval({id:idCount-1, title:title, make:'makeIframeInterval'});
