@@ -165,18 +165,17 @@ var Program = function(){
 } else if (window.location.href.indexOf("google") > -1 && window.location.href.indexOf("youtube") > -1){
 	var link = window.location.href;
 	if (link.split('#').length > 1 && link.split("youtube").length > 1){
-			var settings = JSON.parse(link.split("#")[1].replace(/\%22/g,'"').replace(/%0D/g, "")); //settings is an object including title, remain, link, host, downloadTo
-			$('body').remove(); //Stop video
-			settings.title = decodeURIComponent(settings.title);
-			link = link.split("#")[0]+"&title="+encodeURIComponent(settings.title);
-			SaveToDisk(link, settings); //Save
-			$(window).ready(function(){
-				window.parent.postMessage({origin:settings.host, id:settings.id.toString()}, settings.host);
-			});
-		}
-
-		/* ---------------  PART III, MP3 Handler  --------------------- */	
-	} else if (window.location.href.indexOf("peggo") > -1){
+		var settings = JSON.parse(link.split("#")[1].replace(/\%22/g,'"').replace(/%0D/g, "")); //settings is an object including title, remain, link, host, downloadTo
+		$('body').remove(); //Stop video
+		settings.title = decodeURIComponent(settings.title);
+		link = link.split("#")[0]+"&title="+encodeURIComponent(settings.title);
+		SaveToDisk(link, settings); //Save
+		$(window).ready(function(){
+			window.parent.postMessage({origin:settings.host, id:settings.id.toString()}, settings.host);
+		});
+	}
+/* -----------------  PART III, MP3 Handler  ----------------------- */	
+} else if (window.location.href.indexOf("peggo") > -1){
 		$(document).ready(function(){
 			var lightbox = new Lightbox("Notice", $("<div>", {style:'margin-bottom:1em', html:"This is a (hopefully) temporary solution. The problem is that YouTube uses the HTTPS protocol, whereas this site uses HTTP. As such, Javascript CANNOT embed this site in YouTube, hence leaving the only solution: To open the site in a new window</p><p>Anyway, this will close in 10 seconds</p>"}));
 			lightbox.enable();
@@ -328,6 +327,7 @@ function Interval(params){
 	}
 }
 Interval.prototype.kill = function(remove){
+	if ($("#"+this.id).length > 0) $("#"+this.id).remove()
 	clearInterval(this.interval);
 	this.active = false;
 };
