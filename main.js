@@ -252,12 +252,10 @@ function YQL(youtubeURL, callback){ //Makes a call the YQL console with the give
 		}, function(xhr){
 			if ($(xhr).find("tbody tr").length === 0) return;
 			_this.kill();
-			callback(xhr);
+			_this.callback(xhr);
 		});
 	};
-	var interval = new Interval({'callback':callback, 'buttonId':'downloadBtn', 'make':'makeGetInterval', 'youtubeURL':youtubeURL});
-	processes.push(interval);
-	interval[interval.make]();
+	new Interval({'callback':callback, 'buttonId':'downloadBtn', 'make':'makeGetInterval', 'youtubeURL':youtubeURL});
 }
 
 function HandleText(text){ //Return the correct text
@@ -311,9 +309,7 @@ function GetVid(link, type, requiresAudio, label, mp3){ //Force the download to 
 		this.interval = setInterval(function(){ _this.iframeCheck()}, 12000);
 	};
 
-	var interval = new Interval({id:idCount-1, title:title, make:'makeIframeInterval'});
-	processes.push(interval);
-	interval[interval.make]();
+	new Interval({id:idCount-1, title:title, make:'makeIframeInterval'});
 	if (requiresAudio === 'true') HandleAudio(settings, type);
 }
 
@@ -325,6 +321,8 @@ function Interval(params){
 			this[key] = this.params[key];
 		}
 	}
+	processes.push(this);
+	if (this.make) this[this.make]();
 }
 Interval.prototype.kill = function(remove){
 	if ($("#"+this.id).length > 0) $("#"+this.id).remove()
@@ -354,7 +352,7 @@ function HandleAudio(settings, type){
 	var os = GetOs();
 	var text = MakeScript(settings.title, type, "m4a", "mp4", os);
 	settings.type = os.scriptType;
-	if (os === 'win'){
+	if (os.os === 'win'){
 		SaveToDisk(URL.createObjectURL(text), settings);
 	} else {
 		SaveToDisk("https://github.com/Domination9987/YouTube-Downloader/raw/master/Muxer.zip", settings);

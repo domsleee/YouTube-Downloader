@@ -32,7 +32,6 @@ function Main {
 		for j in *.m4v; do
 			vTitle=$(getTitle "$j" "m4v")
 			if [ "$vTitle" == "$title" ] && [ "$j" != "*.m4v" ]; then
-				echo "$title"
 				ffmpegcall "$j" "$i" "$title.mp4"
 				muxCount=$((muxCount + 1))
 			fi
