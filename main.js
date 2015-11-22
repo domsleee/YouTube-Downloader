@@ -65,6 +65,7 @@ var global_settings = localStorage.getObject('global_settings') || {};
 var default_setings = { //Default settings
 	'quality':72060000, //Quality selected
 	'ignoreMuted':true, //Ignore muted
+	'ignoreWebm':true,  //Ignore webm types (muxing doesn't work atm)
 	'type':'mp4',       //Default type
 	'label':true        //Have quality label on download
 };
@@ -115,7 +116,8 @@ var Program = function(){
 				var label = (text.split("p").length > 1) ? text.split(" ")[0] : "";
 				var ignoreMuted = (global_settings.ignoreMuted && text.indexOf('no audio') !== -1);
 				var ignoreAudio = (text.indexOf('audio only') !== -1);
-				var hidden = (ignoreMuted || ignoreAudio) ? true : false;
+				var ignoreOther = (global_settings.ignoreWebm && type.indexOf('webm') !== -1);
+				var hidden = (ignoreOther || ignoreMuted || ignoreAudio) ? true : false;
 				if (reqAudio.indexOf(Number(val)) > -1) hidden = false, requiresAudio = true, text = text.replace(" (no audio)", "") + "*";
 				qualities.push({val:val, link:link, text:text, type:type, hidden:hidden, requiresAudio:requiresAudio, label:label});
 			});
@@ -260,13 +262,13 @@ function HandleText(text){ //Return the correct text
 	text = text.replace(/(\r\n|\n|\r)/g,"");
 	text = (text.split("x").length > 1) ? text.split("x")[1]+"p" : text;
 	if (text.split("60 fps").length > 1) text = text.split(" (")[0] + "60";
-		return text;
-	}
+	return text;
+}
 function HandleVal(val, text, type, exempt){ //Return the correct value
 	if (text.split("p60").length > 1) val += 60;
 	if (type === 'mp4') val *= 1000;
 	for (i = 0; i<exempt.length; i++) if (text.indexOf(exempt[i]) !== -1) return val;
-		if (text.split("no audio").length > 1) val /= 10000;
+	if (text.split("no audio").length > 1) val /= 10000;
 	if (isNaN(val)) val = -1;
 	return val;
 }
