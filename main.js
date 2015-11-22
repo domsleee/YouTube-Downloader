@@ -193,23 +193,21 @@ var Program = function(){
 
 /* ----------------- PART IV, iframe Handler ---------------------- */
 if (window.location.href.indexOf("youtube") !== -1){
-	$(document).ready(function(){
-		var eventMethod = window.addEventListener ? "addEventListener" : "attachEvent";
-		var eventer = window[eventMethod];
-		var messageEvent = (eventMethod === "attachEvent") ? "onmessage" : "message";
+	var eventMethod = window.addEventListener ? "addEventListener" : "attachEvent";
+	var eventer = window[eventMethod];
+	var messageEvent = (eventMethod === "attachEvent") ? "onmessage" : "message";
 
-		// Listen to message from child IFrame window
-		$(window).on(messageEvent, function(e){
-			var e = e.originalEvent;
-			if (e.origin){
-				if (e.origin.split('docs.google').length > 1 || e.origin.split("googlevideo").length > 1){
-					remain--;
-					$("#"+e.data.id.toString()).remove();
-					if (remain === 0) $("#downloadBtn").onState(), idCount = 0;    
-				}
+	// Listen to message from child IFrame window
+	$(window).on(messageEvent, function(e){
+		var e = e.originalEvent;
+		if (e.origin){
+			if (e.origin.split('docs.google').length > 1 || e.origin.split("googlevideo").length > 1){
+				remain--;
+				$("#"+e.data.id.toString()).remove();
+				if (remain === 0) $("#downloadBtn").onState(), idCount = 0;    
 			}
-		}); 
-	});
+		}
+	}); 
 
 	/* -------------- PART V, Window change Handler ------------------- */
 	var lastHref = window.location.href;
