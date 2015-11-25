@@ -227,10 +227,10 @@ if (window.location.href.indexOf("youtube") !== -1){
 }
 
 function YQL(youtubeURL, callback){ //Makes a call the YQL console with the given youtubeURL
-	Interval.prototype.getCheck = function(){
+	Interval.prototype.getYqlCheck = function(){
 		this.req.abort();
 		this.exec += 1;
-		console.log("Checking get request for the "+this.exec+" time");
+		console.log("Checking YQL request for the "+this.exec+" time");
 		if (this.exec > 9){
 			$("#downloadBtn").html("Error Fetching").prepend($downloadIcon);
 			console.log("YQL Error please");
@@ -240,9 +240,9 @@ function YQL(youtubeURL, callback){ //Makes a call the YQL console with the give
 			this.makeRequest();
 		}
 	};
-	Interval.prototype.makeGetInterval = function(){
+	Interval.prototype.makeYqlGetInterval = function(){
 		var _this = this;
-		this.interval = setInterval(function(){ _this.getCheck()}, 4000);
+		this.interval = setInterval(function(){ _this.getYqlCheck()}, 4000);
 		this.makeRequest();
 	};
 	Interval.prototype.makeRequest = function(){
@@ -255,7 +255,7 @@ function YQL(youtubeURL, callback){ //Makes a call the YQL console with the give
 			_this.callback(xhr);
 		});
 	};
-	new Interval({'callback':callback, 'buttonId':'downloadBtn', 'make':'makeGetInterval', 'youtubeURL':youtubeURL});
+	new Interval({'callback':callback, 'buttonId':'downloadBtn', 'make':'makeYqlGetInterval', 'youtubeURL':youtubeURL});
 }
 
 function HandleText(text){ //Return the correct text
