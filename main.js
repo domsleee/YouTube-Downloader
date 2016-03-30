@@ -49,6 +49,18 @@ String.prototype.getSetting = function(setting){
 	return false;
 }
 
+//Return the indexes of records with specified value
+Array.prototype.listIndexOf = function(property, value){
+	var indexes = [];
+	for (var i = 0; i<this.length; i++){
+		if (this[i][property] === value){
+			indexes.push(i); 
+		}
+	}
+
+	return indexes;
+}
+
 jQuery.fn.extend({
 	toggleState: function(){
 		if ($(this).hasClass("disabled")){
@@ -65,6 +77,11 @@ jQuery.fn.extend({
 	},
 });
 
+//Constants
+var IFRAME_WAIT = 20; //Amount of time to wait for iframe requests (to download)
+var YQL_WAIT = 20; //Amount of time to wait for YQL (savedeo) requests
+
+//Variables
 var remain = 0; //How many requests are remaining...
 var idCount = 0; //A counter to ensure unique IDs on iframes
 var qualities = []; //Quality options
@@ -128,10 +145,12 @@ function Program(){
 				var ignoreOther = (global_settings.ignoreWebm && type.indexOf('webm') !== -1);
 				var hidden = (ignoreOther || ignoreMuted || ignoreAudio) ? true : false;
 				if (reqAudio.indexOf(Number(val)) > -1) hidden = false, requiresAudio = true, text = text.replace(" (no audio)", "") + "*";
-				qualities.push({val:val, link:link, size:size, text:text, type:type, hidden:hidden, requiresAudio:requiresAudio, label:label});
+				if (qualities.listIndexOf("val", val).length === 0){
+					qualities.push({val:val, link:link, size:size, text:text, type:type, hidden:hidden, requiresAudio:requiresAudio, label:label});
+				}
 			});
-			var v = window.location.href.split("?v=")[1].split("&")[0];
-			var redirect = "http://peggo.co/dvr/"+v+"?hi";
+
+			var redirect = "http://peggo.co/dvr/"+window.location.href.getSetting("v")+"?hi";
 			for (i = 0; i<audios.length; i++){
 				qualities.push({val:-audios[i], link:redirect+"&q="+audios[i], text:audios[i].toString()+"kbps", type:"mp3", hidden:false, mp3:true});
 			}
@@ -251,7 +270,7 @@ function YQL(youtubeURL, callback){ //Makes a call the YQL console with the give
 	};
 	Interval.prototype.makeYqlGetInterval = function(){
 		var _this = this;
-		this.interval = setInterval(function(){ _this.getYqlCheck()}, 20*1000);
+		this.interval = setInterval(function(){ _this.getYqlCheck()}, YQL_WAIT*1000);
 		this.makeRequest();
 	};
 	Interval.prototype.makeRequest = function(){
@@ -315,7 +334,7 @@ function GetVid(link, type, requiresAudio, label, mp3){ //Force the download to 
 	};
 	Interval.prototype.makeIframeInterval = function(){
 		var _this = this;
-		this.interval = setInterval(function(){ _this.iframeCheck()}, 12000);
+		this.interval = setInterval(function(){ _this.iframeCheck()}, IFRAME_WAIT*1000);
 	};
 
 	new Interval({id:idCount-1, title:title, make:'makeIframeInterval'});
@@ -563,6 +582,5 @@ function KillProcesses(){
 
 function GetSize(link){
 	var duration = link.getSetting("dur");
-	console.log(unsafeWindow.ytplayer);
-	return null;
+	return duration;
 }
