@@ -85,7 +85,7 @@ MakeCss([
 	".midalign{ vertical-align:middle!important;}",
 	".unselectable{ -webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;}",
 	"#downloadBtnCont{ margin-left:1em;position:relative;display:inline-block}",
-	"#downloadBtn{ padding:0 8px 0 5.5px;height:24px;background-color:green;color:white;font-weight:normal;box-shadow:0 1px 0 rgba(0,0,0,0.05);vertical-align:middle;font-size:11px;border:solid 1px transparent;cursor:pointer;font:11px Roboto,arial,sans-serif}",
+	"#downloadBtn{ padding:0 8px 0 5.5px;height:24px;background-color:green;color:white;font-weight:normal;box-shadow:0 1px 0 rgba(0,0,0,0.05);vertical-align:middle;font-size:11px;border:solid 1px transparent;border-radius:2px 0 0 2px;cursor:pointer;font:11px Roboto,arial,sans-serif}",
 	"#downloadBtn.disabled{ background-color:gray!important}",
 	"#downloadBtn:hover{ background-color:darkgreen;}",
 	"#downloadBtnInfo{ cursor:default;height:22px;line-height:24px;padding:0 6px;color:#737373;font-size:11px;text-align:center;display:inline-block;margin-left:-2px;border:1px solid #ccc;background-color:#fafafa;vertical-align:middle;border-radius:0 2px 2px 0}",
@@ -251,7 +251,7 @@ function YQL(youtubeURL, callback){ //Makes a call the YQL console with the give
 	};
 	Interval.prototype.makeYqlGetInterval = function(){
 		var _this = this;
-		this.interval = setInterval(function(){ _this.getYqlCheck()}, 20*000);
+		this.interval = setInterval(function(){ _this.getYqlCheck()}, 20*1000);
 		this.makeRequest();
 	};
 	Interval.prototype.makeRequest = function(){
