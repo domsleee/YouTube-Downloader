@@ -42,6 +42,13 @@ String.prototype.getAfter = function(a, b){
 	return str_a + c + str_b.join(b);
 };
 
+String.prototype.getSetting = function(setting){
+	var split = this.split("&"+setting+"=")[1];
+	var val = (split) ? split.split("&")[0] : false;
+	if (val) return val;
+	return false;
+}
+
 jQuery.fn.extend({
 	toggleState: function(){
 		if ($(this).hasClass("disabled")){
@@ -53,7 +60,7 @@ jQuery.fn.extend({
 	onState: function(){
 		if ($(this).hasClass("disabled")){
 			$(this).removeClass("disabled");
-			$(this).html("Download");
+			$(this).html("Download").prepend($downloadIcon);
 		}
 	},
 });
@@ -83,8 +90,9 @@ MakeCss([
 	"#downloadBtn:hover{ background-color:darkgreen;}",
 	"#downloadBtnInfo{ cursor:default;height:22px;line-height:24px;padding:0 6px;color:#737373;font-size:11px;text-align:center;display:inline-block;margin-left:-2px;border:1px solid #ccc;background-color:#fafafa;vertical-align:middle;border-radius:0 2px 2px 0}",
 	"#downIcon{ position:relative;display:inline-block;border-width:5px;border-style:solid;border-color:rgb(134, 130, 130) transparent transparent;margin-left:0 6px}",
-	"ul#options{ background-color:white;z-index:500;width:150px;cursor:default}",
-	"ul#options li:hover{ background-color:green}"
+	"ul#options{ background-color:white;z-index:500;width:150px;cursor:default;box-shadow:0 0 5px rgba(0,0,0,0.5)}",
+	"ul#options li{ line-height:2em}",
+	"ul#options li:hover{ background-color:green;}"
 	]);
 var $downloadIcon = $("<img>", {style:'margin-right:4.5px', class:'midalign', src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA3ElEQVQ4T6WT7RHBQBCGn1RAB3RAB6hAVEA6oAI6QAdK0AE6oIOkAx0wb+bO7NxskjHZP7m53ffZj9tk9LSsp542wBgYhQQv4O0l8wBD4AhsEsEF2KUgD/AEJg2tybewEAvIgTWgb5upilMMiIArsExUD2Ae7u7ALJxLYAWomnqIB2DvpGwCxFAlLQTwepZY99sQrZKnpooIOQvwcbJr4oXzCpqRtVIA2591WojOqVixlQAa1K1h7BIqxhNLUrcg09Koz8Efq6055ekixWfr4mitf8/YFdzq7/03fgFd3CYQgbnh+gAAAABJRU5ErkJggg=="});
 var $downArrow = $("<img>", {style:'margin-left:6px;', class:'midalign', src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAAV0lEQVQoU2NkIBEwkqiegXQNc+fOTWBkZJxPjE3///9PBNtAjCaQ4uTk5AVwJ+HTBFMMMhzFD9g0ISvG0IDuPHTFWDXANIFokJvRA4P0YCUmOJHVkGwDAPVTKkQsO0MlAAAAAElFTkSuQmCC"});
@@ -94,7 +102,7 @@ $(document).ready(function(){
 	Program();
 });
 
-var Program = function(){
+function Program(){
 	KillProcesses();
 	if (window.location.href.indexOf("watch") > -1){
 		qualities = [];
@@ -110,6 +118,7 @@ var Program = function(){
 			$rows.each(function(){
 				var requiresAudio = false;
 				var link = $(this).find("td a").attr("href");
+				var size = GetSize(link);
 				var text = HandleText($(this).find("th").text());
 				var type = $(this).find("td").eq(0).text();
 				var val = HandleVal(text.split("p")[0], text, type, exempt);
@@ -119,7 +128,7 @@ var Program = function(){
 				var ignoreOther = (global_settings.ignoreWebm && type.indexOf('webm') !== -1);
 				var hidden = (ignoreOther || ignoreMuted || ignoreAudio) ? true : false;
 				if (reqAudio.indexOf(Number(val)) > -1) hidden = false, requiresAudio = true, text = text.replace(" (no audio)", "") + "*";
-				qualities.push({val:val, link:link, text:text, type:type, hidden:hidden, requiresAudio:requiresAudio, label:label});
+				qualities.push({val:val, link:link, size:size, text:text, type:type, hidden:hidden, requiresAudio:requiresAudio, label:label});
 			});
 			var v = window.location.href.split("?v=")[1].split("&")[0];
 			var redirect = "http://peggo.co/dvr/"+v+"?hi";
@@ -242,7 +251,7 @@ function YQL(youtubeURL, callback){ //Makes a call the YQL console with the give
 	};
 	Interval.prototype.makeYqlGetInterval = function(){
 		var _this = this;
-		this.interval = setInterval(function(){ _this.getYqlCheck()}, 4000);
+		this.interval = setInterval(function(){ _this.getYqlCheck()}, 20*000);
 		this.makeRequest();
 	};
 	Interval.prototype.makeRequest = function(){
@@ -550,4 +559,10 @@ function KillProcesses(){
 		processes.splice(i, 1);
 		i--;
 	}
+}
+
+function GetSize(link){
+	var duration = link.getSetting("dur");
+	console.log(unsafeWindow.ytplayer);
+	return null;
 }
