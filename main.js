@@ -35,11 +35,16 @@ Storage.prototype.getObject = function(key){ //Retrieve JSON localstorage
 };
 
 String.prototype.getAfter = function(a, b){
-	var str_a = this.split(a)[0];
-	var str_b = this.split(a)[1].split(b);
-	str_b.splice(0, 1);
-	var c = (str_b.length === 0) ? "" : b;
-	return str_a + c + str_b.join(b);
+	var returnVal = this;
+	if (this.split(a).length > 1){
+		var str_a = this.split(a)[0];
+		var str_b = this.split(a)[1].split(b);
+		str_b.splice(0, 1);
+		var c = (str_b.length === 0) ? "" : b;
+		returnVal = str_a + c + str_b.join(b);
+	}
+	
+	return returnVal;
 };
 
 String.prototype.getSetting = function(setting){
@@ -319,7 +324,7 @@ function GetVid(link, type, requiresAudio, label, mp3){ //Force the download to 
 	var host = GetHost();
 	var title = GetTitle(label);
 	var settings = {"title":encodeURIComponent(title), "host":host, "type":type, "id":idCount, "label":label};
-	if (link.split("title").length > 1) link = link.getAfter("&title=", "&");
+	link = link.getAfter("&title=", "&");
 
 	var $iframe = $("<iframe>", { //Send video to other script to be downloaded.
 		src: link+"#"+JSON.stringify(settings),
@@ -632,6 +637,9 @@ function GetSizes(){
 	for (var i = 0; i<$lis.length; i++){
 		GetSize($lis.eq(i), function($li, size){
 			console.log(size);
+			$li.append($("<span>", {
+				html:FormatSize(size)
+			}))
 		});
 	}
 	
@@ -663,4 +671,26 @@ function GetSize($li, callback){
 			}
     	});
   	}
+}
+
+function FormatSize(size){
+	var sizes = {
+		GB:Math.pow(1024,3),
+		MB:Math.pow(1024,2),
+		KB:Math.pow(1024,1),
+	}
+	var returnSize;
+
+	for (sizeFormat in sizes){
+		if (sizes.hasOwnProperty(sizeFormat)){
+			var minSize = sizes[sizeFormat];
+			if (size > minSize){
+				console.log(size+"/"+minSize);
+				returnSize = (size/minSize).toFixed(2) + sizeFormat;
+				break;
+			}
+		}
+	}
+
+	return returnSize;
 }
