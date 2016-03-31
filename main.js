@@ -12,7 +12,7 @@
 // @include      http://peggo.co/dvr/*?hi*
 // @license      Creative Commons; http://creativecommons.org/licenses/by/4.0/
 // @require      http://code.jquery.com/jquery-1.11.0.min.js
-// @grant        none
+// @grant        GM_xmlhttpRequest
 // ==/UserScript==
 
 //Download icon is made by Google at http://www.google.com under Creative Commons 3.0
@@ -136,7 +136,6 @@ function Program(){
 			$rows.each(function(){
 				var requiresAudio = false;
 				var link = $(this).find("td a").attr("href");
-				var size = GetSize(link);
 				var text = HandleText($(this).find("th").text());
 				var type = $(this).find("td").eq(0).text();
 				var val = HandleVal(text.split("p")[0], text, type, exempt);
@@ -153,7 +152,6 @@ function Program(){
 				qualities.push({
 					val:val, 
 					link:link, 
-					size:size, 
 					text:text, 
 					type:type, 
 					hidden:hidden, 
@@ -198,6 +196,7 @@ function Program(){
 			$("#watch7-subscription-container").append($("<span>", {id:'downloadBtnCont', class:'unselectable'}).append($downBtn).append($downloadBtnInfo));
 			$options = AdjustOptions($options); //realigns options window
 			$("body").prepend($options);
+			GetSizes();
 
 			//Add events to the main frame
 			AddEvents();
@@ -628,7 +627,40 @@ function KillProcesses(){
 	}
 }
 
-function GetSize(link){
-	var duration = link.getSetting("dur");
-	return duration;
+function GetSizes(){
+	$lis = $("#options").find("li").not(":contains(mp3)");
+	for (var i = 0; i<$lis.length; i++){
+		GetSize($lis.eq(i), function($li, size){
+			console.log(size);
+		});
+	}
+	
+}
+
+function GetSize($li, callback){
+	var link = $li.attr("link");
+	var size = link.getSetting("clen");
+	if (size){
+		callback($li, size);
+	} else {
+		//We must make a cross-domain request to determine the size from the return headers...
+        GM_xmlhttpRequest({
+			method:'HEAD',
+			url:link,
+			onload:function(xhr){
+				if (xhr.readyState === 4 && xhr.status === 200) { //If it's okay
+					var size = 0;
+					if (typeof xhr.getResponseHeader === 'function'){
+						size = xhr.getResponseHeader('Content-length');
+					} else if (xhr.responseHeaders){
+						var match = /length: (.*)/.exec(xhr.responseHeaders);
+						if (match){
+							size = match[1];
+						}
+					}
+					callback($li, size);
+				}
+			}
+    	});
+  	}
 }
