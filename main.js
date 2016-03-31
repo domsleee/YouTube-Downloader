@@ -43,7 +43,7 @@ String.prototype.getAfter = function(a, b){
 };
 
 String.prototype.getSetting = function(setting){
-	var split = this.split("&"+setting+"=")[1];
+	var split = this.split(setting+"=")[1];
 	var val = (split) ? split.split("&")[0] : false;
 	if (val) return val;
 	return false;
@@ -86,12 +86,12 @@ var remain = 0; //How many requests are remaining...
 var idCount = 0; //A counter to ensure unique IDs on iframes
 var qualities = []; //Quality options
 var global_settings = localStorage.getObject('global_settings') || {};
-var default_setings = { //Default settings
-	'quality':72060000, //Quality selected
-	'ignoreMuted':true, //Ignore muted
-	'ignoreWebm':true,  //Ignore webm types (muxing doesn't work atm)
-	'type':'mp4',       //Default type
-	'label':true        //Have quality label on download
+var default_setings = {           //Default settings
+	'quality':72060000,           //Quality selected
+	'ignoreMuted':true,           //Ignore muted
+	'ignoreTypes':["webm"],       //Ignore webm types (muxing doesn't work atm)
+	'type':'mp4',                 //Default type
+	'label':true                  //Have quality label on download
 };
 var audios = [128, 192, 256];
 var processes = [];
@@ -124,14 +124,15 @@ function Program(){
 	if (window.location.href.indexOf("watch") > -1){
 		qualities = [];
 		var exempt = ["1080p (no audio)", "480p (no audio)"];
-		var reqAudio = [72060, 72060000, 108060, 108060000, 1080, 1080000, 480, 480000];
+		var reqAudioKeep = [72060, 72060000, 108060, 108060000, 1080, 1080000, 480, 480000];
 		$("#options").remove();
 		$downBtn = $("<button>", {id:"downloadBtn", text:"Loading...", class:"disabled"}).prepend($downloadIcon);
 		$("#watch7-subscription-container").append($("<span>", {id:'downloadBtnCont', class:'unselectable'}).append($downBtn));
 		YQL(window.location.href, function(xhr){
 			$("#downloadBtnCont").remove();
 			var $iframe = $(xhr);
-			var $rows = $iframe.find("tbody tr");
+			var videoId = window.location.href.getSetting("v");
+			var $rows = $iframe.find("table a[href*="+videoId+"]").parent().parent().parent().parent().find("tbody tr");
 			$rows.each(function(){
 				var requiresAudio = false;
 				var link = $(this).find("td a").attr("href");
@@ -142,12 +143,14 @@ function Program(){
 				var label = (text.split("p").length > 1) ? text.split(" ")[0] : "";
 				var ignoreMuted = (global_settings.ignoreMuted && text.indexOf('no audio') !== -1);
 				var ignoreAudio = (text.indexOf('audio only') !== -1);
-				var ignoreOther = (global_settings.ignoreWebm && type.indexOf('webm') !== -1);
+				var ignoreOther = (global_settings.ignoreTypes.indexOf(type) !== -1);
 				var hidden = (ignoreOther || ignoreMuted || ignoreAudio) ? true : false;
-				if (reqAudio.indexOf(Number(val)) > -1) hidden = false, requiresAudio = true, text = text.replace(" (no audio)", "") + "*";
-				if (qualities.listIndexOf("val", val).length === 0){
-					qualities.push({val:val, link:link, size:size, text:text, type:type, hidden:hidden, requiresAudio:requiresAudio, label:label});
+				if (reqAudioKeep.indexOf(Number(val)) > -1 && !ignoreOther){
+					hidden = false;
+					requiresAudio = true;
+					text = text.replace(" (no audio)", "") + "*";
 				}
+				qualities.push({val:val, link:link, size:size, text:text, type:type, hidden:hidden, requiresAudio:requiresAudio, label:label});
 			});
 
 			var redirect = "http://peggo.co/dvr/"+window.location.href.getSetting("v")+"?hi";
@@ -179,10 +182,14 @@ function Program(){
 				SortQualities($quality, $options);
 			});
 
+			//If it already exists, don't bother
+			if ($("#downloadBtn").length > 0) return;
+
 			$("#watch7-subscription-container").append($("<span>", {id:'downloadBtnCont', class:'unselectable'}).append($downBtn).append($quality));
 			$options = AdjustOptions($options); //realigns options window
 			$("body").prepend($options);
 
+			//Add events to the main frame
 			AddEvents();
 
 			$(document).ready(function(){
@@ -468,6 +475,9 @@ function SortQualities($quality, $options){
 }
 
 function AddEvents(){ //Adds events to the window
+	$(window).on("blur focus", function(e){
+		AdjustOptions($("#options"));
+	});
 	$(window).resize(function(){
 		AdjustOptions($("#options"));
 	});
