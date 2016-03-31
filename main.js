@@ -150,12 +150,30 @@ function Program(){
 					requiresAudio = true;
 					text = text.replace(" (no audio)", "") + "*";
 				}
-				qualities.push({val:val, link:link, size:size, text:text, type:type, hidden:hidden, requiresAudio:requiresAudio, label:label});
+				qualities.push({
+					val:val, 
+					link:link, 
+					size:size, 
+					text:text, 
+					type:type, 
+					hidden:hidden, 
+					requiresAudio:requiresAudio, 
+					label:label
+				});
 			});
 
 			var redirect = "http://peggo.co/dvr/"+window.location.href.getSetting("v")+"?hi";
 			for (i = 0; i<audios.length; i++){
-				qualities.push({val:-audios[i], link:redirect+"&q="+audios[i], text:audios[i].toString()+"kbps", type:"mp3", hidden:false, mp3:true});
+				if (global_settings.ignoreTypes.indexOf("mp3") === -1){
+					qualities.push({
+						val:-audios[i], 
+						link:redirect+"&q="+audios[i], 
+						text:audios[i].toString()+"kbps", 
+						type:"mp3", 
+						hidden:false, 
+						mp3:true
+					});
+				}
 			}
 			qualities.sort(QualitySort);
 
@@ -165,10 +183,13 @@ function Program(){
 				var $span = $("#downloadBtnInfo span");
 				GetVid($span.attr("link"), $span.attr("type"), $span.attr("requiresAudio"), $span.attr("label"), $span.attr("mp3"));
 			});
-			
 
 			$downloadBtnInfo = $("<span>", {id:"downloadBtnInfo"}).append($downArrow);
-			$options = $("<ul>", {id:"options", class:"unselectable", style:"display:none;position:absolute"});
+			$options = $("<ul>", {
+				id:"options", 
+				class:"unselectable", 
+				style:"display:none;position:absolute"
+			});
 			$options = SortQualities($downloadBtnInfo, $options);
 			
 			//If it already exists, don't bother
@@ -197,7 +218,10 @@ function Program(){
 /* -----------------  PART III, MP3 Handler  ----------------------- */	
 } else if (window.location.href.indexOf("peggo") > -1){
 		$(document).ready(function(){
-			var lightbox = new Lightbox("Notice", $("<div>", {style:'margin-bottom:1em', html:"This is a (hopefully) temporary solution. The problem is that YouTube uses the HTTPS protocol, whereas this site uses HTTP. As such, Javascript CANNOT embed this site in YouTube, hence leaving the only solution: To open the site in a new window</p><p>Anyway, this will close in 10 seconds</p>"}));
+			var lightbox = new Lightbox("Notice", $("<div>", {
+				style:'margin-bottom:1em', 
+				html:"This is a (hopefully) temporary solution. The problem is that YouTube uses the HTTPS protocol, whereas this site uses HTTP. As such, Javascript CANNOT embed this site in YouTube, hence leaving the only solution: To open the site in a new window</p><p>Anyway, this will close in 10 seconds</p>"
+			}));
 			lightbox.enable();
 			new timeout({range:[0, 11], time:1, callback:function(i){ //execute a for loop for range, execute every certain amount of seconds
 				var lightbox = new Lightbox("Notice", $("<div>", {html:(10-i)+"..."}));
@@ -277,8 +301,8 @@ function YQL(youtubeURL, callback){ //Makes a call the YQL console with the give
 }
 
 function HandleText(text){ //Return the correct text
-	text = text.replace(/(\r\n|\n|\r)/g,"");
-	text = (text.split("x").length > 1) ? text.split("x")[1]+"p" : text;
+	text = text.replace(/(\r\n|\n|\r)/g,"").replace(/([0-9]{3,4}) p/, "$1p");
+	text = (text.split("x").length > 1) ? text.split("x")[1].trim()+"p" : text;
 	if (text.split("60 fps").length > 1) text = text.split(" (")[0] + "60";
 	return text;
 }
