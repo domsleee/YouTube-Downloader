@@ -165,38 +165,21 @@ function Program(){
 				var $span = $("#downloadBtnInfo span");
 				GetVid($span.attr("link"), $span.attr("type"), $span.attr("requiresAudio"), $span.attr("label"), $span.attr("mp3"));
 			});
-			$(document).click(function(e){
-				if (e.target.id === 'downloadBtnInfo' || $(e.target).parent().attr("id") === 'downloadBtnInfo') return;
-				$options.hide();
-			});
-			$quality = $("<span>", {id:"downloadBtnInfo"}).append($downArrow).click(function(){
-				$options.toggle();
-			});
-			$options = $("<ul>", {id:"options", class:"unselectable", style:"display:none;position:absolute"});
-			$options = SortQualities($quality, $options);
-			$(document).on("click", "#options li", function(){
-				$options.toggle();
-				global_settings.quality = Number($(this).attr("value"));
-				global_settings.type = $(this).attr("type");
-				UpdateGlobalSettings();
-				SortQualities($quality, $options);
-			});
+			
 
+			$downloadBtnInfo = $("<span>", {id:"downloadBtnInfo"}).append($downArrow);
+			$options = $("<ul>", {id:"options", class:"unselectable", style:"display:none;position:absolute"});
+			$options = SortQualities($downloadBtnInfo, $options);
+			
 			//If it already exists, don't bother
 			if ($("#downloadBtn").length > 0) return;
 
-			$("#watch7-subscription-container").append($("<span>", {id:'downloadBtnCont', class:'unselectable'}).append($downBtn).append($quality));
+			$("#watch7-subscription-container").append($("<span>", {id:'downloadBtnCont', class:'unselectable'}).append($downBtn).append($downloadBtnInfo));
 			$options = AdjustOptions($options); //realigns options window
 			$("body").prepend($options);
 
 			//Add events to the main frame
 			AddEvents();
-
-			$(document).ready(function(){
-				if ($("#options").length > 0){
-					AdjustOptions($("#options"));
-				}
-			});
 		});
 /* ---------------  PART II, the external handler  --------------------- */
 } else if (window.location.href.indexOf("google") > -1 && window.location.href.indexOf("youtube") > -1){
@@ -442,9 +425,9 @@ function SaveToDisk(link, settings){
 	save.click();
 }
 
-function SortQualities($quality, $options){
+function SortQualities($downloadBtnInfo, $options){
 	var qualitySet = false;
-	$quality.html("");
+	$downloadBtnInfo.html("");
 	$options.html("");
 	for (i = 0; i<qualities.length; i++){
 		var display = (qualities[i].hidden) ? "none" : "default";
@@ -461,7 +444,7 @@ function SortQualities($quality, $options){
 
 		var $span = $("<span>", {html:$li.html(), label:$li.attr("label"), link:$li.attr("link"), type:$li.attr("type"), requiresAudio:$li.attr("requiresAudio"), mp3:$li.attr("mp3")});
 		if (Number($li.attr("value")) === global_settings.quality && $li.attr("type") === global_settings.type && !qualitySet){
-			$quality.append($span).append($downArrow);
+			$downloadBtnInfo.append($span).append($downArrow);
 			qualitySet = true;
 		} 
 		$options.append($li);
@@ -469,17 +452,48 @@ function SortQualities($quality, $options){
 	if (!qualitySet){
 		var $li = $options.find("li").eq(0);
 		var $span = $("<span>", {html:$li.html(), link:$li.attr("link"), type:$li.attr("type")});
-		$quality.append($span).append($downArrow);
+		$downloadBtnInfo.append($span).append($downArrow);
 	}
 	return $options;
 }
 
 function AddEvents(){ //Adds events to the window
+	var $options = $("#options");
+	var $downloadBtnInfo = $("#downloadBtnInfo");
+
+	//As soon as document is ready, realign options
+	$(document).ready(function(){
+		if ($options.length > 0){
+			AdjustOptions($options);
+		}
+	});
+
+	//Realign options on focus/resize
 	$(window).on("blur focus", function(e){
-		AdjustOptions($("#options"));
+		AdjustOptions($options);
 	});
 	$(window).resize(function(){
-		AdjustOptions($("#options"));
+		AdjustOptions($options);
+	});
+
+	//Toggle options on info click
+	$downloadBtnInfo.click(function(){
+		$options.toggle();
+	});
+
+	//Show options on options click
+	$(document).on("click", "#options li", function(){
+		$options.toggle();
+		global_settings.quality = Number($(this).attr("value"));
+		global_settings.type = $(this).attr("type");
+		UpdateGlobalSettings();
+		SortQualities($downloadBtnInfo, $options);
+	});
+
+	//Hide options on document click
+	$(document).click(function(e){
+		if (e.target.id === 'downloadBtnInfo' || $(e.target).parent().attr("id") === 'downloadBtnInfo') return;
+		$options.hide();
 	});
 }
 
