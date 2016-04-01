@@ -98,8 +98,8 @@ jQuery.fn.extend({
 //Constants
 var IFRAME_WAIT = 20; //Amount of time to wait for iframe requests (to download)
 var YQL_WAIT = 20; //Amount of time to wait for YQL (savedeo) requests
-var SIZE_LOADED = "green"; //The text colour of the size once loaded
-var SIZE_WAITING = "red"; //The text colour of the size when waiting on audio size
+var SIZE_LOADED = "red"; //The text colour of the size once loaded
+var SIZE_WAITING = "green"; //The text colour of the size when waiting on audio size
 var SIZE_DP = 1; //Amount of decimal places for size
 
 //Variables
@@ -134,7 +134,7 @@ MakeCss([
 	"#downIcon{ position:relative;display:inline-block;border-width:5px;border-style:solid;border-color:rgb(134, 130, 130) transparent transparent;margin-left:0 6px}",
 	"ul#options{ background-color:white;z-index:500;width:175px;cursor:default;box-shadow:0 0 5px rgba(0,0,0,0.5)}",
 	"ul#options li{ line-height:2em}",
-	"ul#options li:hover{ background-color:green;}",
+	"ul#options li:hover{ background-color:orange;}",
 	"span.size{ float:right}",
 	"span.tag{ margin:0.2em; padding:0.2em; background-color:lightblue; color:grey}"
 ]);
@@ -181,7 +181,7 @@ function Program(){
 				if (reqAudioKeep.indexOf(Number(val)) > -1 && !ignoreOther){
 					hidden = false;
 					requiresAudio = true;
-					text = text.replace(" (no audio)", "") + "*";
+					text = text.replace(" (no audio)", "");
 				}
 				var duration = link.getSetting("dur");
 				if (duration){
@@ -490,7 +490,11 @@ function SaveToDisk(link, settings){
 }
 
 function SortQualities($downloadBtnInfo, $options){
+	//Fallback options
 	var qualitySet = false;
+	var $firstSpanInfo;
+	
+	//Reset
 	$downloadBtnInfo.html("");
 	$options.html("");
 	for (i = 0; i<qualities.length; i++){
@@ -504,37 +508,44 @@ function SortQualities($downloadBtnInfo, $options){
 			label:quality.label,
 			style:"display:"+display,
 			requiresAudio:quality.requiresAudio,
-			mp3:quality.mp3
+			mp3:quality.mp3,
+			size:quality.size
 		});
 
 		//Tags
-		var $spanTag = $("<span>", {
-			class:"tag",
-			html:$li.attr("type")
-		})
-
-		$li.append($spanTag);
+		$tags = GetTags($li);
+		for (var j = 0; j<$tags.length; j++) $li.append($tags[j].clone());
 
 		//For the top bar
 		var $spanInfo = $("<span>", {
-			html:quality.text + " " + $li.attr("type"),
+			html:quality.text,
 			label:$li.attr("label"), 
 			link:$li.attr("link"), 
 			type:$li.attr("type"), 
 			requiresAudio:$li.attr("requiresAudio"), 
 			mp3:$li.attr("mp3")
 		});
+		if (!$firstSpanInfo) $firstSpanInfo = $spanInfo;
 
+		//for (var j = 0; j<$tags.length; j++) $spanInfo.append($tags[j].clone());
+		if ($li.attr("size")){
+			$li.append($("<span>", {
+				html:$li.attr("size"),
+				class:"size"
+			}))
+		}
+		
+		//If it matches the set quality, assign it to the info box
 		if (Number($li.attr("value")) === global_settings.quality && $li.attr("type") === global_settings.type && !qualitySet){
 			$downloadBtnInfo.append($spanInfo).append($downArrow);
 			qualitySet = true;
 		} 
 		$options.append($li);
 	}
+
+	//If no quality is set
 	if (!qualitySet){
-		var $li = $options.find("li").eq(0);
-		var $span = $("<span>", {html:$li.html(), link:$li.attr("link"), type:$li.attr("type")});
-		$downloadBtnInfo.append($span).append($downArrow);
+		$downloadBtnInfo.append($firstSpanInfo).append($downArrow);
 	}
 	return $options;
 }
@@ -815,4 +826,22 @@ function DownloadButton(text, disabled){
 	}));
 
 	return $button;
+}
+
+function GetTags($li){
+	$tags = [];
+	$tags.push($("<span>", {
+		class:"tag",
+		html:$li.attr("type")
+	}));
+
+	var requiresAudio = $li.attr("requiresAudio");
+	if (requiresAudio && requiresAudio !== "false"){
+		$tags.push($("<span>", {
+			class:"tag",
+			html:"DASH"
+		}));
+	}
+
+	return $tags;
 }
