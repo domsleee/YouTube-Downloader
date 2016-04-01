@@ -77,7 +77,7 @@ jQuery.fn.extend({
 	onState: function(){
 		if ($(this).hasClass("disabled")){
 			$(this).removeClass("disabled");
-			$(this).html("Download").prepend($downloadIcon);
+			$(this).append($downloadIcon).append($("<span>", {html:"Download"}));
 		}
 	},
 });
@@ -115,7 +115,7 @@ MakeCss([
 	"ul#options{ background-color:white;z-index:500;width:150px;cursor:default;box-shadow:0 0 5px rgba(0,0,0,0.5)}",
 	"ul#options li{ line-height:2em}",
 	"ul#options li:hover{ background-color:green;}"
-	]);
+]);
 var $downloadIcon = $("<img>", {style:'margin-right:4.5px', class:'midalign', src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA3ElEQVQ4T6WT7RHBQBCGn1RAB3RAB6hAVEA6oAI6QAdK0AE6oIOkAx0wb+bO7NxskjHZP7m53ffZj9tk9LSsp542wBgYhQQv4O0l8wBD4AhsEsEF2KUgD/AEJg2tybewEAvIgTWgb5upilMMiIArsExUD2Ae7u7ALJxLYAWomnqIB2DvpGwCxFAlLQTwepZY99sQrZKnpooIOQvwcbJr4oXzCpqRtVIA2591WojOqVixlQAa1K1h7BIqxhNLUrcg09Koz8Efq6055ekixWfr4mitf8/YFdzq7/03fgFd3CYQgbnh+gAAAABJRU5ErkJggg=="});
 var $downArrow = $("<img>", {style:'margin-left:6px;', class:'midalign', src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAAV0lEQVQoU2NkIBEwkqiegXQNc+fOTWBkZJxPjE3///9PBNtAjCaQ4uTk5AVwJ+HTBFMMMhzFD9g0ISvG0IDuPHTFWDXANIFokJvRA4P0YCUmOJHVkGwDAPVTKkQsO0MlAAAAAElFTkSuQmCC"});
 
@@ -131,7 +131,7 @@ function Program(){
 		var exempt = ["1080p (no audio)", "480p (no audio)"];
 		var reqAudioKeep = [72060, 72060000, 108060, 108060000, 1080, 1080000, 480, 480000];
 		$("#options").remove();
-		$downBtn = $("<button>", {id:"downloadBtn", text:"Loading...", class:"disabled"}).prepend($downloadIcon);
+		$downBtn = DownloadButton("Loading...", true);
 		$("#watch7-subscription-container").append($("<span>", {id:'downloadBtnCont', class:'unselectable'}).append($downBtn));
 		YQL(window.location.href, function(xhr){
 			$("#downloadBtnCont").remove();
@@ -153,6 +153,16 @@ function Program(){
 					hidden = false;
 					requiresAudio = true;
 					text = text.replace(" (no audio)", "") + "*";
+				}
+				if (ignoreAudio && type === "m4a"){
+					var $li = $("<li>", {
+						link:link
+					});
+					GetSize($li, function($li, size){
+						audio_size = size;
+						duration = link.getSetting("dur");
+						console.log(audio_size, duration);
+					})
 				}
 				qualities.push({
 					val:val, 
@@ -180,12 +190,7 @@ function Program(){
 			}
 			qualities.sort(QualitySort);
 
-			$downBtn = $("<button>", {id:"downloadBtn", text:"Download"}).prepend($downloadIcon).click(function(){
-				if ($(this).hasClass("disabled")) return;
-				$(this).toggleState();
-				var $span = $("#downloadBtnInfo span");
-				GetVid($span.attr("link"), $span.attr("type"), $span.attr("requiresAudio"), $span.attr("label"), $span.attr("mp3"));
-			});
+			$downBtn = DownloadButton("Download");
 
 			$downloadBtnInfo = $("<span>", {id:"downloadBtnInfo"}).append($downArrow);
 			$options = $("<ul>", {
@@ -282,7 +287,7 @@ function YQL(youtubeURL, callback){ //Makes a call the YQL console with the give
 			console.log("YQL Error please");
 			this.kill();
 		} else {
-			$("#downloadBtn").html("Loading...("+(this.exec+1)+")").prepend($downloadIcon);
+			$("#downloadBtn span").html("Loading...("+(this.exec+1)+")").prepend($downloadIcon);
 			this.makeRequest();
 		}
 	};
@@ -344,7 +349,7 @@ function GetVid(link, type, requiresAudio, label, mp3){ //Force the download to 
 		var exist = ($("#"+this.id).length > 0);
 		(exist) ? $('#'+this.id).attr("src", $('#'+this.id).attr("src")) : this.kill()
 		this.exec += 1;
-		if (exist) $("#downloadBtn").html("Download ("+(this.exec+1)+")").prepend($downloadIcon);
+		if (exist) $("#downloadBtn span").html("Download ("+(this.exec+1)+")").prepend($downloadIcon);
 		console.log("Checking iframe "+this.id+" for the "+this.exec+" time");
 		if (this.exec > 4){
 			console.log("HEUSTON, we have a problem");
@@ -496,6 +501,14 @@ function AddEvents(){ //Adds events to the window
 		}
 	});
 
+	//Download button click
+	$("#downloadBtn").click(function(){
+		if ($(this).hasClass("disabled")) return;
+		$(this).toggleState();
+		var $span = $("#downloadBtnInfo span");
+		GetVid($span.attr("link"), $span.attr("type"), $span.attr("requiresAudio"), $span.attr("label"), $span.attr("mp3"));
+	});
+
 	//Realign options on focus/resize
 	$(window).on("blur focus", function(e){
 		AdjustOptions($options);
@@ -636,7 +649,6 @@ function GetSizes(){
 	$lis = $("#options").find("li").not(":contains(mp3)");
 	for (var i = 0; i<$lis.length; i++){
 		GetSize($lis.eq(i), function($li, size){
-			console.log(size);
 			$li.append($("<span>", {
 				html:FormatSize(size)
 			}))
@@ -685,7 +697,6 @@ function FormatSize(size){
 		if (sizes.hasOwnProperty(sizeFormat)){
 			var minSize = sizes[sizeFormat];
 			if (size > minSize){
-				console.log(size+"/"+minSize);
 				returnSize = (size/minSize).toFixed(2) + sizeFormat;
 				break;
 			}
@@ -693,4 +704,17 @@ function FormatSize(size){
 	}
 
 	return returnSize;
+}
+
+//Returns a jquery element of the download button with a certain text
+function DownloadButton(text, disabled){
+	var disabledText = (disabled) ? " disabled" : "";
+	var $button =  $("<button>", {
+		id:"downloadBtn",
+		class:disabledText
+	}).append($downloadIcon).append($("<span>", {
+		class:"midalign", html:text
+	}));
+
+	return $button;
 }
