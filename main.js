@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Downloader
 // @namespace    https://greasyfork.org/users/10036
-// @version      0.07
+// @version      0.08
 // @description  Download 60fps MP4 videos and 256kbps MP3 audio from YouTube
 // @author       D. Slee
 // @icon         http://youtube.com/favicon.ico
@@ -134,11 +134,11 @@ MakeCss([
     "#downloadBtn:hover{ background-color:darkgreen;}",
     "#downloadBtnInfo{ cursor:default;height:22px;line-height:24px;padding:0 6px;color:#737373;font-size:11px;text-align:center;display:inline-block;margin-left:-2px;border:1px solid #ccc;background-color:#fafafa;vertical-align:middle;border-radius:0 2px 2px 0}",
     "#downIcon{ position:relative;display:inline-block;border-width:5px;border-style:solid;border-color:rgb(134, 130, 130) transparent transparent;margin-left:0 6px}",
-    "ul#options{ background-color:white;z-index:500;width:175px;cursor:default;box-shadow:0 0 5px rgba(0,0,0,0.5)}",
-    "ul#options li{ line-height:2em}",
+    "ul#options{ background-color:white;z-index:500;width:200px;padding:0 5px;cursor:default;box-shadow:0 0 5px rgba(0,0,0,0.5)}",
+    "ul#options li{ line-height:2em; padding: 0 5px; margin:0 -5px;}",
     "ul#options li:hover{ background-color:orange;}",
     "span.size{ float:right}",
-    "span.tag{ margin:0.2em; padding:0.2em; background-color:lightblue; color:grey}",
+    "span.tag{ margin:0.2em; padding:0.2em; background-color:lightblue; color:grey;}",
     ".floatNormal{ float:inherit!important}",
     ".ignoreMouse{ pointer-events:none;}"
 ]);
@@ -505,7 +505,7 @@ function SortQualities($downloadBtnInfo, $options){
     $options.html("");
     for (i = 0; i<qualities.length; i++){
         var quality = qualities[i];
-        var display = (quality.hidden) ? "none" : "default";
+        var display = (quality.hidden) ? "none" : "inherit";
         $li = $("<li>", {
             html:quality.text,
             value:quality.val,
