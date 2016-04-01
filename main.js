@@ -136,7 +136,9 @@ MakeCss([
 	"ul#options li{ line-height:2em}",
 	"ul#options li:hover{ background-color:orange;}",
 	"span.size{ float:right}",
-	"span.tag{ margin:0.2em; padding:0.2em; background-color:lightblue; color:grey}"
+	"span.tag{ margin:0.2em; padding:0.2em; background-color:lightblue; color:grey}",
+	".floatNormal{ float:inherit!important}",
+	".ignoreMouse{ pointer-events:none;}"
 ]);
 var $downloadIcon = $("<img>", {style:'margin-right:4.5px', class:'midalign', src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA3ElEQVQ4T6WT7RHBQBCGn1RAB3RAB6hAVEA6oAI6QAdK0AE6oIOkAx0wb+bO7NxskjHZP7m53ffZj9tk9LSsp542wBgYhQQv4O0l8wBD4AhsEsEF2KUgD/AEJg2tybewEAvIgTWgb5upilMMiIArsExUD2Ae7u7ALJxLYAWomnqIB2DvpGwCxFAlLQTwepZY99sQrZKnpooIOQvwcbJr4oXzCpqRtVIA2591WojOqVixlQAa1K1h7BIqxhNLUrcg09Koz8Efq6055ekixWfr4mitf8/YFdzq7/03fgFd3CYQgbnh+gAAAABJRU5ErkJggg=="});
 var $downArrow = $("<img>", {style:'margin-left:6px;', class:'midalign', src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAAV0lEQVQoU2NkIBEwkqiegXQNc+fOTWBkZJxPjE3///9PBNtAjCaQ4uTk5AVwJ+HTBFMMMhzFD9g0ISvG0IDuPHTFWDXANIFokJvRA4P0YCUmOJHVkGwDAPVTKkQsO0MlAAAAAElFTkSuQmCC"});
@@ -523,17 +525,13 @@ function SortQualities($downloadBtnInfo, $options){
 			link:$li.attr("link"), 
 			type:$li.attr("type"), 
 			requiresAudio:$li.attr("requiresAudio"), 
-			mp3:$li.attr("mp3")
+			mp3:$li.attr("mp3"),
+			value:quality.val
 		});
 		if (!$firstSpanInfo) $firstSpanInfo = $spanInfo;
 
+		//Add tags to info
 		//for (var j = 0; j<$tags.length; j++) $spanInfo.append($tags[j].clone());
-		if ($li.attr("size")){
-			$li.append($("<span>", {
-				html:$li.attr("size"),
-				class:"size"
-			}))
-		}
 		
 		//If it matches the set quality, assign it to the info box
 		if (Number($li.attr("value")) === global_settings.quality && $li.attr("type") === global_settings.type && !qualitySet){
@@ -707,6 +705,12 @@ function KillProcesses(){
 }
 
 function GetSizes(){
+	var $downloadBtnInfo = $("#downloadBtnInfo");
+	GetSize($downloadBtnInfo.find("span"), function($span, size){
+		GetSizesCallback($span, size, true);
+	});
+
+	//Non mp3 list items
 	$lis = $("#options").find("li").not(":contains(mp3)");
 	for (var i = 0; i<$lis.length; i++){
 		GetSize($lis.eq(i), function($li, size){
@@ -714,6 +718,7 @@ function GetSizes(){
 		});
 	}
 
+	//Mp3 list items
 	$lis_mp3 = $("#options").find("li:contains(mp3)");
 	for (var i = 0; i<$lis_mp3.length; i++){
 		if (global_properties.duration){
@@ -726,7 +731,7 @@ function GetSizes(){
 	}
 }
 
-function GetSizesCallback($li, size){
+function GetSizesCallback($li, size, forceNeutralFloat){
 	var color = $li.attr("requiresAudio") ? SIZE_WAITING : SIZE_LOADED;
 	
 	//Set the respective quantity to the found size, so as the size only needs to be obtained once
@@ -736,11 +741,12 @@ function GetSizesCallback($li, size){
 	}
 
 	//If the span doesn't already exist, add it
+	var extraClass = (forceNeutralFloat) ? " floatNormal" : "";
 	if ($li.find("span.size").length === 0){
 		$li.append($("<span>", {
 			html:FormatSize(size),
 			style:"color:"+color,
-			class:"size"
+			class:"size ignoreMouse"+extraClass
 		}));
 	}
 
@@ -795,6 +801,7 @@ function GetSize($li, callback){
 }
 
 function FormatSize(size){
+	size = parseInt(size, 10);
 	var sizes = {
 		GB:Math.pow(1024,3),
 		MB:Math.pow(1024,2),
@@ -831,14 +838,14 @@ function DownloadButton(text, disabled){
 function GetTags($li){
 	$tags = [];
 	$tags.push($("<span>", {
-		class:"tag",
+		class:"tag ignoreMouse",
 		html:$li.attr("type")
 	}));
 
 	var requiresAudio = $li.attr("requiresAudio");
 	if (requiresAudio && requiresAudio !== "false"){
 		$tags.push($("<span>", {
-			class:"tag",
+			class:"tag ignoreMouse",
 			html:"DASH"
 		}));
 	}
