@@ -56,14 +56,27 @@ String.prototype.getSetting = function(setting){
 
 //Return the indexes of records with specified value
 Array.prototype.listIndexOf = function(property, value){
+	value = (value) ? value.toString() : "ABCSDGSL:LJKSDFF:BGHSFKL:HSL:J";
 	var indexes = [];
 	for (var i = 0; i<this.length; i++){
-		if (this[i][property] === value){
+		var str = (this[i][property]) ? this[i][property].toString() : "";
+		if (str === value){
 			indexes.push(i); 
 		}
 	}
 
 	return indexes;
+}
+
+//Return the records with specified value
+Array.prototype.listMatches = function(property, value){
+	var indexes = this.listIndexOf(property, value);
+	var values = [];
+	for (var i = 0; i<indexes.length; i++){
+		values.push(this[indexes[i]]);
+	}
+
+	return values;
 }
 
 jQuery.fn.extend({
@@ -118,9 +131,11 @@ MakeCss([
 	"#downloadBtn:hover{ background-color:darkgreen;}",
 	"#downloadBtnInfo{ cursor:default;height:22px;line-height:24px;padding:0 6px;color:#737373;font-size:11px;text-align:center;display:inline-block;margin-left:-2px;border:1px solid #ccc;background-color:#fafafa;vertical-align:middle;border-radius:0 2px 2px 0}",
 	"#downIcon{ position:relative;display:inline-block;border-width:5px;border-style:solid;border-color:rgb(134, 130, 130) transparent transparent;margin-left:0 6px}",
-	"ul#options{ background-color:white;z-index:500;width:150px;cursor:default;box-shadow:0 0 5px rgba(0,0,0,0.5)}",
+	"ul#options{ background-color:white;z-index:500;width:175px;cursor:default;box-shadow:0 0 5px rgba(0,0,0,0.5)}",
 	"ul#options li{ line-height:2em}",
-	"ul#options li:hover{ background-color:green;}"
+	"ul#options li:hover{ background-color:green;}",
+	"span.size{ float:right}",
+	"span.tag{ margin:0.2em; padding:0.2em; background-color:lightblue; color:grey}"
 ]);
 var $downloadIcon = $("<img>", {style:'margin-right:4.5px', class:'midalign', src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA3ElEQVQ4T6WT7RHBQBCGn1RAB3RAB6hAVEA6oAI6QAdK0AE6oIOkAx0wb+bO7NxskjHZP7m53ffZj9tk9LSsp542wBgYhQQv4O0l8wBD4AhsEsEF2KUgD/AEJg2tybewEAvIgTWgb5upilMMiIArsExUD2Ae7u7ALJxLYAWomnqIB2DvpGwCxFAlLQTwepZY99sQrZKnpooIOQvwcbJr4oXzCpqRtVIA2591WojOqVixlQAa1K1h7BIqxhNLUrcg09Koz8Efq6055ekixWfr4mitf8/YFdzq7/03fgFd3CYQgbnh+gAAAABJRU5ErkJggg=="});
 var $downArrow = $("<img>", {style:'margin-left:6px;', class:'midalign', src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAAV0lEQVQoU2NkIBEwkqiegXQNc+fOTWBkZJxPjE3///9PBNtAjCaQ4uTk5AVwJ+HTBFMMMhzFD9g0ISvG0IDuPHTFWDXANIFokJvRA4P0YCUmOJHVkGwDAPVTKkQsO0MlAAAAAElFTkSuQmCC"});
@@ -328,7 +343,7 @@ function HandleText(text){ //Return the correct text
 	text = text.replace(/(\r\n|\n|\r)/g,"").replace(/([0-9]{3,4}) p/, "$1p");
 	text = (text.split("x").length > 1) ? text.split("x")[1].trim()+"p" : text;
 	if (text.split("60 fps").length > 1) text = text.split(" (")[0] + "60";
-	return text;
+	return text+ " ";
 }
 function HandleVal(val, text, type, exempt){ //Return the correct value
 	if (text.split("p60").length > 1) val += 60;
@@ -478,28 +493,39 @@ function SortQualities($downloadBtnInfo, $options){
 	$downloadBtnInfo.html("");
 	$options.html("");
 	for (i = 0; i<qualities.length; i++){
-		var display = (qualities[i].hidden) ? "none" : "default";
+		var quality = qualities[i];
+		var display = (quality.hidden) ? "none" : "default";
 		$li = $("<li>", {
-			html:qualities[i].text + " " + qualities[i].type,
-			value:qualities[i].val,
-			link:qualities[i].link,
-			type:qualities[i].type,
-			label:qualities[i].label,
+			html:quality.text,
+			value:quality.val,
+			link:quality.link,
+			type:quality.type,
+			label:quality.label,
 			style:"display:"+display,
-			requiresAudio:qualities[i].requiresAudio,
-			mp3:qualities[i].mp3
+			requiresAudio:quality.requiresAudio,
+			mp3:quality.mp3
 		});
 
-		var $span = $("<span>", {
-			html:$li.html(), 
+		//Tags
+		var $spanTag = $("<span>", {
+			class:"tag",
+			html:$li.attr("type")
+		})
+
+		$li.append($spanTag);
+
+		//For the top bar
+		var $spanInfo = $("<span>", {
+			html:quality.text + " " + $li.attr("type"),
 			label:$li.attr("label"), 
 			link:$li.attr("link"), 
 			type:$li.attr("type"), 
 			requiresAudio:$li.attr("requiresAudio"), 
 			mp3:$li.attr("mp3")
 		});
+
 		if (Number($li.attr("value")) === global_settings.quality && $li.attr("type") === global_settings.type && !qualitySet){
-			$downloadBtnInfo.append($span).append($downArrow);
+			$downloadBtnInfo.append($spanInfo).append($downArrow);
 			qualitySet = true;
 		} 
 		$options.append($li);
@@ -551,6 +577,7 @@ function AddEvents(){ //Adds events to the window
 		global_settings.type = $(this).attr("type");
 		UpdateGlobalSettings();
 		SortQualities($downloadBtnInfo, $options);
+		GetSizes();
 	});
 
 	//Hide options on document click
@@ -682,22 +709,26 @@ function GetSizes(){
 			var kbps = Math.abs($li.attr("value"));
 			var bytes_per_second = kbps / 8 * 1000;
 			var size = bytes_per_second * global_properties.duration;
-			$li.append($("<span>", {
-				html:FormatSize(size),
-				style:"color:"+SIZE_LOADED
-			}));
+			GetSizesCallback($li, size);
 		}
 	}
 }
 
 function GetSizesCallback($li, size){
 	var color = $li.attr("requiresAudio") ? SIZE_WAITING : SIZE_LOADED;
+	
+	//Set the respective quantity to the found size, so as the size only needs to be obtained once
+	var quality = qualities.listMatches("val", $li.attr("value"));
+	if (quality.length > 0){
+		quality[0].size = size;
+	}
 
 	//If the span doesn't already exist, add it
-	if ($li.find("span").length === 0){
+	if ($li.find("span.size").length === 0){
 		$li.append($("<span>", {
 			html:FormatSize(size),
-			style:"color:"+color
+			style:"color:"+color,
+			class:"size"
 		}));
 	}
 
@@ -705,8 +736,9 @@ function GetSizesCallback($li, size){
 	if ($li.attr("requiresAudio")){
 		if (global_properties.audio_size){
 			size = parseInt(size) + parseInt(global_properties.audio_size)
-			$li.find("span").html(FormatSize(size));
-			$li.find("span").css("color", SIZE_LOADED);
+			$li.find("span.size").html(FormatSize(size));
+			$li.find("span.size").css("color", SIZE_LOADED);
+			$li.attr("size", size);
 
 		} else {
 			//Try again in 2 seconds
@@ -720,6 +752,11 @@ function GetSizesCallback($li, size){
 function GetSize($li, callback){
 	var link = $li.attr("link");
 	var size = link.getSetting("clen");
+	var quality = qualities.listMatches("val", $li.attr("value"));
+	if (quality.length > 0){
+		size = quality[0].size;
+	}
+
 	if (size){
 		callback($li, size);
 	} else {
@@ -757,7 +794,7 @@ function FormatSize(size){
 		if (sizes.hasOwnProperty(sizeFormat)){
 			var minSize = sizes[sizeFormat];
 			if (size > minSize){
-				returnSize = (size/minSize).toFixed(2) + sizeFormat;
+				returnSize = (size/minSize).toFixed(1) + sizeFormat;
 				break;
 			}
 		}
