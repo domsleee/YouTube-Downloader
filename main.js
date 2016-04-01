@@ -85,6 +85,8 @@ jQuery.fn.extend({
 //Constants
 var IFRAME_WAIT = 20; //Amount of time to wait for iframe requests (to download)
 var YQL_WAIT = 20; //Amount of time to wait for YQL (savedeo) requests
+var SIZE_LOADED = "green"; //The text colour of the size once loaded
+var SIZE_WAITING = "red"; //The text colour of the size when waiting on audio size
 
 //Variables
 var remain = 0; //How many requests are remaining...
@@ -100,6 +102,10 @@ var default_setings = {           //Default settings
 };
 var audios = [128, 192, 256];
 var processes = [];
+var global_properties = {
+	audio_size:false,
+	duration:false
+}
 
 SetupGlobalSettings(); //Ensures that all global_settings are set... if not, refer to default_settings
 MakeCss([
@@ -124,9 +130,16 @@ $(document).ready(function(){
 	Program();
 });
 
+//This function is run on every new page load.... should be used to reset global variables
 function Program(){
+
 	KillProcesses();
 	if (window.location.href.indexOf("watch") > -1){
+		//Reset global properties
+		global_properties = {
+			audio_size:false,
+			duration:false
+		}
 		qualities = [];
 		var exempt = ["1080p (no audio)", "480p (no audio)"];
 		var reqAudioKeep = [72060, 72060000, 108060, 108060000, 1080, 1080000, 480, 480000];
@@ -154,14 +167,16 @@ function Program(){
 					requiresAudio = true;
 					text = text.replace(" (no audio)", "") + "*";
 				}
+				var duration = link.getSetting("dur");
+				if (duration){
+					global_properties.duration = duration;
+				}
 				if (ignoreAudio && type === "m4a"){
 					var $li = $("<li>", {
 						link:link
 					});
 					GetSize($li, function($li, size){
-						audio_size = size;
-						duration = link.getSetting("dur");
-						console.log(audio_size, duration);
+						global_properties.audio_size = size;
 					})
 				}
 				qualities.push({
@@ -475,7 +490,14 @@ function SortQualities($downloadBtnInfo, $options){
 			mp3:qualities[i].mp3
 		});
 
-		var $span = $("<span>", {html:$li.html(), label:$li.attr("label"), link:$li.attr("link"), type:$li.attr("type"), requiresAudio:$li.attr("requiresAudio"), mp3:$li.attr("mp3")});
+		var $span = $("<span>", {
+			html:$li.html(), 
+			label:$li.attr("label"), 
+			link:$li.attr("link"), 
+			type:$li.attr("type"), 
+			requiresAudio:$li.attr("requiresAudio"), 
+			mp3:$li.attr("mp3")
+		});
 		if (Number($li.attr("value")) === global_settings.quality && $li.attr("type") === global_settings.type && !qualitySet){
 			$downloadBtnInfo.append($span).append($downArrow);
 			qualitySet = true;
@@ -649,12 +671,50 @@ function GetSizes(){
 	$lis = $("#options").find("li").not(":contains(mp3)");
 	for (var i = 0; i<$lis.length; i++){
 		GetSize($lis.eq(i), function($li, size){
-			$li.append($("<span>", {
-				html:FormatSize(size)
-			}))
+			GetSizesCallback($li, size);
 		});
 	}
-	
+
+	$lis_mp3 = $("#options").find("li:contains(mp3)");
+	for (var i = 0; i<$lis_mp3.length; i++){
+		if (global_properties.duration){
+			var $li = $lis_mp3.eq(i);
+			var kbps = Math.abs($li.attr("value"));
+			var bytes_per_second = kbps / 8 * 1000;
+			var size = bytes_per_second * global_properties.duration;
+			$li.append($("<span>", {
+				html:FormatSize(size),
+				style:"color:"+SIZE_LOADED
+			}));
+		}
+	}
+}
+
+function GetSizesCallback($li, size){
+	var color = $li.attr("requiresAudio") ? SIZE_WAITING : SIZE_LOADED;
+
+	//If the span doesn't already exist, add it
+	if ($li.find("span").length === 0){
+		$li.append($("<span>", {
+			html:FormatSize(size),
+			style:"color:"+color
+		}));
+	}
+
+	//If it is of the DASH format
+	if ($li.attr("requiresAudio")){
+		if (global_properties.audio_size){
+			size = parseInt(size) + parseInt(global_properties.audio_size)
+			$li.find("span").html(FormatSize(size));
+			$li.find("span").css("color", SIZE_LOADED);
+
+		} else {
+			//Try again in 2 seconds
+			setTimeout(function(){
+				GetSizesCallback($li, size);
+			})
+		}
+	}
 }
 
 function GetSize($li, callback){
