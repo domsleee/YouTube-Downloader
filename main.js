@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Downloader
 // @namespace    https://greasyfork.org/users/10036
-// @version      0.06
+// @version      0.07
 // @description  Download 60fps MP4 videos and 256kbps MP3 audio from YouTube
 // @author       D. Slee
 // @icon         http://youtube.com/favicon.ico
@@ -89,8 +89,9 @@ jQuery.fn.extend({
 	},
 	onState: function(){
 		if ($(this).hasClass("disabled")){
+			$(this).html("");
 			$(this).removeClass("disabled");
-			$(this).append($downloadIcon).append($("<span>", {html:"Download"}));
+			$(this).append($downloadIcon).append($("<span>", {html:"Download", class:"midalign"}));
 		}
 	},
 });
@@ -101,6 +102,7 @@ var YQL_WAIT = 20; //Amount of time to wait for YQL (savedeo) requests
 var SIZE_LOADED = "red"; //The text colour of the size once loaded
 var SIZE_WAITING = "green"; //The text colour of the size when waiting on audio size
 var SIZE_DP = 1; //Amount of decimal places for size
+var MP3_WAIT = 10; //Amount of time to wait for mp3 to download
 
 //Variables
 var remain = 0; //How many requests are remaining...
@@ -214,7 +216,7 @@ function Program(){
 					qualities.push({
 						val:-audios[i], 
 						link:redirect+"&q="+audios[i], 
-						text:audios[i].toString()+"kbps", 
+						text:audios[i].toString()+"kbps ", 
 						type:"mp3", 
 						hidden:false, 
 						mp3:true
@@ -265,14 +267,15 @@ function Program(){
 				html:"This is a (hopefully) temporary solution. The problem is that YouTube uses the HTTPS protocol, whereas this site uses HTTP. As such, Javascript CANNOT embed this site in YouTube, hence leaving the only solution: To open the site in a new window</p><p>Anyway, this will close in 10 seconds</p>"
 			}));
 			lightbox.enable();
-			new timeout({range:[0, 11], time:1, callback:function(i){ //execute a for loop for range, execute every certain amount of seconds
-				var lightbox = new Lightbox("Notice", $("<div>", {html:(10-i)+"..."}));
-				$("title").text(10-i+" seconds remaining");
-				if (i === 10) self.close();
+			new timeout({range:[0, MP3_WAIT+1], time:1, callback:function(i){ //execute a for loop for range, execute every certain amount of seconds
+				var lightbox = new Lightbox("Notice", $("<div>", {html:(MP3_WAIT-i)+"..."}));
+				$("title").text(MP3_WAIT-i+" seconds remaining");
+				if (i === MP3_WAIT) self.close();
 			}});
-			$("#audio-bitrate-select").val(window.location.href.split("&q=")[1]);
-			$("#record-audio").get(0).click();
-
+			$(window.top).find("#audio-bitrate-select").val(window.location.href.split("&q=")[1]);
+			setTimeout(function(){
+				$("#record-audio-button")[0].click();
+			}, 3*1000);
 		});
 	}
 };
@@ -286,6 +289,7 @@ if (window.location.href.indexOf("youtube") !== -1){
 	// Listen to message from child IFrame window
 	$(window).on(messageEvent, function(e){
 		var e = e.originalEvent;
+		var id = (e.data) ? e.data.id : "nothing";
 		if (e.origin){
 			if (e.origin.split('docs.google').length > 1 || e.origin.split("googlevideo").length > 1){
 				remain--;
@@ -382,7 +386,7 @@ function GetVid(link, type, requiresAudio, label, mp3){ //Force the download to 
 		var exist = ($("#"+this.id).length > 0);
 		(exist) ? $('#'+this.id).attr("src", $('#'+this.id).attr("src")) : this.kill()
 		this.exec += 1;
-		if (exist) $("#downloadBtn span").html("Download ("+(this.exec+1)+")").prepend($downloadIcon);
+		if (exist) $("#downloadBtn").html(DownloadButton("Download ("+(this.exec+1)+")").html());
 		console.log("Checking iframe "+this.id+" for the "+this.exec+" time");
 		if (this.exec > 4){
 			console.log("HEUSTON, we have a problem");
@@ -732,7 +736,7 @@ function GetSizes(){
 }
 
 function GetSizesCallback($li, size, forceNeutralFloat){
-	var color = $li.attr("requiresAudio") ? SIZE_WAITING : SIZE_LOADED;
+	var color = ($li.attr("requiresAudio") === "true") ? SIZE_WAITING : SIZE_LOADED;
 	
 	//Set the respective quantity to the found size, so as the size only needs to be obtained once
 	var quality = qualities.listMatches("val", $li.attr("value"));
@@ -751,7 +755,7 @@ function GetSizesCallback($li, size, forceNeutralFloat){
 	}
 
 	//If it is of the DASH format
-	if ($li.attr("requiresAudio")){
+	if ($li.attr("requiresAudio") === "true"){
 		if (global_properties.audio_size){
 			size = parseInt(size) + parseInt(global_properties.audio_size)
 			$li.find("span.size").html(FormatSize(size));
