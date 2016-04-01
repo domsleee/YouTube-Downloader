@@ -100,6 +100,7 @@ var IFRAME_WAIT = 20; //Amount of time to wait for iframe requests (to download)
 var YQL_WAIT = 20; //Amount of time to wait for YQL (savedeo) requests
 var SIZE_LOADED = "green"; //The text colour of the size once loaded
 var SIZE_WAITING = "red"; //The text colour of the size when waiting on audio size
+var SIZE_DP = 1; //Amount of decimal places for size
 
 //Variables
 var remain = 0; //How many requests are remaining...
@@ -794,7 +795,7 @@ function FormatSize(size){
 		if (sizes.hasOwnProperty(sizeFormat)){
 			var minSize = sizes[sizeFormat];
 			if (size > minSize){
-				returnSize = (size/minSize).toFixed(1) + sizeFormat;
+				returnSize = (size/minSize).toFixed(SIZE_DP) + sizeFormat;
 				break;
 			}
 		}
