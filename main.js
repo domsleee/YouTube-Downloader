@@ -163,7 +163,7 @@ function Program(){
         qualities = [];
         var exempt = ["1080p (no audio)", "480p (no audio)"];
         var reqAudioKeep = [72060, 72060000, 108060, 108060000, 1080, 1080000, 480, 480000];
-        $("#options").remove();
+        $("#downloadBtnCont").remove();
         $downBtn = DownloadButton("Loading...", true);
         $("#watch7-subscription-container").append($("<span>", {id:'downloadBtnCont', class:'unselectable'}).append($downBtn));
         YQL(window.location.href, function(xhr){
