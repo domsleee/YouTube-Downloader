@@ -241,6 +241,7 @@ function Program(){
             $("#watch7-subscription-container").append($("<span>", {id:'downloadBtnCont', class:'unselectable'}).append($downBtn).append($downloadBtnInfo));
             $options = AdjustOptions($options); //realigns options window
             $("body").prepend($options);
+
             GetSizes();
 
             //Add events to the main frame
@@ -709,29 +710,17 @@ function KillProcesses(){
 }
 
 function GetSizes(){
-    var $downloadBtnInfo = $("#downloadBtnInfo");
+    //Main window
     GetSize($downloadBtnInfo.find("span"), function($span, size){
         GetSizesCallback($span, size, true);
     });
 
-    //Non mp3 list items
-    $lis = $("#options").find("li").not(":contains(mp3)");
+    //Drop down list
+    $lis = $("#options").find("li");
     for (var i = 0; i<$lis.length; i++){
         GetSize($lis.eq(i), function($li, size){
             GetSizesCallback($li, size);
         });
-    }
-
-    //Mp3 list items
-    $lis_mp3 = $("#options").find("li:contains(mp3)");
-    for (var i = 0; i<$lis_mp3.length; i++){
-        if (global_properties.duration){
-            var $li = $lis_mp3.eq(i);
-            var kbps = Math.abs($li.attr("value"));
-            var bytes_per_second = kbps / 8 * 1000;
-            var size = bytes_per_second * global_properties.duration;
-            GetSizesCallback($li, size);
-        }
     }
 }
 
@@ -766,7 +755,7 @@ function GetSizesCallback($li, size, forceNeutralFloat){
             //Try again in 2 seconds
             setTimeout(function(){
                 GetSizesCallback($li, size);
-            })
+            }, 2000);
         }
     }
 }
@@ -779,7 +768,13 @@ function GetSize($li, callback){
         size = quality[0].size;
     }
 
-    if (size){
+    if ($li.attr("type") === "mp3") {
+        var kbps = Math.abs($li.attr("value"));
+        var bytes_per_second = kbps / 8 * 1000;
+        var size = bytes_per_second * global_properties.duration;
+        callback($li, size);
+    }
+    else if (size){
         callback($li, size);
     } else {
         //We must make a cross-domain request to determine the size from the return headers...
@@ -810,7 +805,7 @@ function FormatSize(size){
         GB:Math.pow(1024,3),
         MB:Math.pow(1024,2),
         KB:Math.pow(1024,1),
-    }
+    };
     var returnSize;
 
     for (sizeFormat in sizes){
