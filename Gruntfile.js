@@ -3,16 +3,27 @@ module.exports = function(grunt) {
         // Merge the JS files
         concat: {
             options: {
+                process: function(src, filepath) {
+                    var arr = [
+                        "// "+filepath,
+                        "// =================================================",
+                        src
+                    ];
+                    if (filepath.split("header").length > 1) {
+                        arr = [src];
+                    }
+                    return arr.join("\n");
+                },
                 separator: "\n\n"
             },
             dist: {
-                src: ["src/header.js", "src/prototypes.js", "src/interval.js", "src/*.js"],
+                src: ["src/header.js", "src/prototypes.js", "src/classes/*.js", "src/*.js"],
                 dest: "main.js"
             }
         },
         watch: {
             scripts: {
-                files: ["src/*.js"],
+                files: ["src/**/*.js", "src/*.js"],
                 tasks: ["concat"],
                 options: {
                     spawn: false

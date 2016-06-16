@@ -1,47 +1,66 @@
-Storage.prototype.setObject = function(key, value){ //Set JSON localstorage
+// These are functions that are references throughout
+// the script that perform useful tasks
+
+// Set JSON localstorage
+Storage.prototype.setObject = function(key, value) {
     this.setItem(key, JSON.stringify(value));
 };
 
-Storage.prototype.getObject = function(key){ //Retrieve JSON localstorage
+// Retrieve JSON localstorage
+Storage.prototype.getObject = function(key) {
     var value = this.getItem(key);
     return value && JSON.parse(value);
 };
 
-String.prototype.getAfter = function(a, b){
-    var returnVal = this;
-    if (this.split(a).length > 1){
-        var str_a = this.split(a)[0];
-        var str_b = this.split(a)[1].split(b);
-        str_b.splice(0, 1);
-        var c = (str_b.length === 0) ? "" : b;
-        returnVal = str_a + c + str_b.join(b);
-    }
-    
-    return returnVal;
-};
-
-String.prototype.getSetting = function(setting){
-    var split = this.split(setting+"=")[1];
+// Get the setting from an encoded URL string
+String.prototype.getSetting = function(setting, index) {
+    index = index || 1;
+    var split = this.split(setting+"=")[index];
     var val = (split) ? split.split("&")[0] : false;
-    if (val) return val;
-    return false;
+    return val;
 };
 
-//Return the indexes of records with specified value
-Array.prototype.listIndexOf = function(property, value){
-    value = (value) ? value.toString() : "ABCSDGSL:LJKSDFF:BGHSFKL:HSL:J";
+String.prototype.setSetting = function(setting, value) {
+    var newString = this;
+    var hasQuestionMark = (newString.indexOf("?") != -1);
+    if (!hasQuestionMark) {
+        newString += "?";
+
+    // Search for setting, delete it if it exists
+    } else {
+        var search = newString.split(setting+"=");
+        if (search.length > 1) {
+            search[1] = search[1].replace(/[^\&]*/, "");
+            newString = search.join("");
+        }
+    }
+
+    // Append the setting on the end
+    var ampersand = (hasQuestionMark) ? "&" : "";
+    newString += ampersand + setting + "=" + value;
+
+    return newString;
+};
+
+// Return the indexes of records with specified value
+Array.prototype.listIndexOf = function(property, value) {
     var indexes = [];
-    for (var i = 0; i<this.length; i++){
-        var str = (this[i][property]) ? this[i][property].toString() : "";
-        if (str === value){
-            indexes.push(i); 
+
+    // If the value exists
+    if (typeof(value) !== "undefined") {
+        value = value.toString();
+        for (var i = 0; i<this.length; i++) {
+            var str = (this[i][property]) ? this[i][property].toString() : "";
+            if (str === value) {
+                indexes.push(i);
+            }
         }
     }
 
     return indexes;
 };
 
-//Return the records with specified value
+// Return the records with specified value
 Array.prototype.listMatches = function(property, value){
     var indexes = this.listIndexOf(property, value);
     var values = [];
@@ -52,7 +71,20 @@ Array.prototype.listMatches = function(property, value){
     return values;
 };
 
-jQuery.fn.extend({
+// Assert function
+function assert(condition, message) {
+    var context = "Youtube Downloader - ";
+    if (!condition) {
+        message = message || "Assertion failed";
+        if (typeof Error !== "undefined") {
+            throw new Error(context + message);
+        }
+        throw message; // Fallback
+    }
+}
+
+// Adds useful prototyping functions for jQuery objects
+$.fn.extend({
     toggleState: function(){
         if ($(this).hasClass("disabled")){
             $(this).removeClass("disabled");
@@ -64,7 +96,10 @@ jQuery.fn.extend({
         if ($(this).hasClass("disabled")){
             $(this).html("");
             $(this).removeClass("disabled");
-            $(this).append($downloadIcon).append($("<span>", {html:"Download", class:"midalign"}));
+            $(this).append($downloadIcon).append($("<span>", {
+                html:"Download",
+                class:"midalign"
+            }));
         }
     },
 });

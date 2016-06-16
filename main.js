@@ -13,6 +13,8 @@
 // @license      Creative Commons; http://creativecommons.org/licenses/by/4.0/
 // @require      http://code.jquery.com/jquery-1.11.0.min.js
 // @grant        GM_xmlhttpRequest
+// @grant        GM_getValue
+// @grant        GM_setValue
 // ==/UserScript==
 
 //Download icon is made by Google at http://www.google.com under Creative Commons 3.0
@@ -25,50 +27,71 @@
 //4. Iframe Handler - Handles the iframe post events
 //5. Window change Handler - Since YouTube uses Ajax for all their pages, a manual window change function needed to be implemented
 
-Storage.prototype.setObject = function(key, value){ //Set JSON localstorage
+// src/prototypes.js
+// =================================================
+// These are functions that are references throughout
+// the script that perform useful tasks
+
+// Set JSON localstorage
+Storage.prototype.setObject = function(key, value) {
     this.setItem(key, JSON.stringify(value));
 };
 
-Storage.prototype.getObject = function(key){ //Retrieve JSON localstorage
+// Retrieve JSON localstorage
+Storage.prototype.getObject = function(key) {
     var value = this.getItem(key);
     return value && JSON.parse(value);
 };
 
-String.prototype.getAfter = function(a, b){
-    var returnVal = this;
-    if (this.split(a).length > 1){
-        var str_a = this.split(a)[0];
-        var str_b = this.split(a)[1].split(b);
-        str_b.splice(0, 1);
-        var c = (str_b.length === 0) ? "" : b;
-        returnVal = str_a + c + str_b.join(b);
-    }
-    
-    return returnVal;
-};
-
-String.prototype.getSetting = function(setting){
-    var split = this.split(setting+"=")[1];
+// Get the setting from an encoded URL string
+String.prototype.getSetting = function(setting, index) {
+    index = index || 1;
+    var split = this.split(setting+"=")[index];
     var val = (split) ? split.split("&")[0] : false;
-    if (val) return val;
-    return false;
+    return val;
 };
 
-//Return the indexes of records with specified value
-Array.prototype.listIndexOf = function(property, value){
-    value = (value) ? value.toString() : "ABCSDGSL:LJKSDFF:BGHSFKL:HSL:J";
+String.prototype.setSetting = function(setting, value) {
+    var newString = this;
+    var hasQuestionMark = (newString.indexOf("?") != -1);
+    if (!hasQuestionMark) {
+        newString += "?";
+
+    // Search for setting, delete it if it exists
+    } else {
+        var search = newString.split(setting+"=");
+        if (search.length > 1) {
+            search[1] = search[1].replace(/[^\&]*/, "");
+            newString = search.join("");
+        }
+    }
+
+    // Append the setting on the end
+    var ampersand = (hasQuestionMark) ? "&" : "";
+    newString += ampersand + setting + "=" + value;
+
+    return newString;
+};
+
+// Return the indexes of records with specified value
+Array.prototype.listIndexOf = function(property, value) {
     var indexes = [];
-    for (var i = 0; i<this.length; i++){
-        var str = (this[i][property]) ? this[i][property].toString() : "";
-        if (str === value){
-            indexes.push(i); 
+
+    // If the value exists
+    if (typeof(value) !== "undefined") {
+        value = value.toString();
+        for (var i = 0; i<this.length; i++) {
+            var str = (this[i][property]) ? this[i][property].toString() : "";
+            if (str === value) {
+                indexes.push(i);
+            }
         }
     }
 
     return indexes;
 };
 
-//Return the records with specified value
+// Return the records with specified value
 Array.prototype.listMatches = function(property, value){
     var indexes = this.listIndexOf(property, value);
     var values = [];
@@ -79,7 +102,20 @@ Array.prototype.listMatches = function(property, value){
     return values;
 };
 
-jQuery.fn.extend({
+// Assert function
+function assert(condition, message) {
+    var context = "Youtube Downloader - ";
+    if (!condition) {
+        message = message || "Assertion failed";
+        if (typeof Error !== "undefined") {
+            throw new Error(context + message);
+        }
+        throw message; // Fallback
+    }
+}
+
+// Adds useful prototyping functions for jQuery objects
+$.fn.extend({
     toggleState: function(){
         if ($(this).hasClass("disabled")){
             $(this).removeClass("disabled");
@@ -91,11 +127,156 @@ jQuery.fn.extend({
         if ($(this).hasClass("disabled")){
             $(this).html("");
             $(this).removeClass("disabled");
-            $(this).append($downloadIcon).append($("<span>", {html:"Download", class:"midalign"}));
+            $(this).append($downloadIcon).append($("<span>", {
+                html:"Download",
+                class:"midalign"
+            }));
         }
     },
 });
 
+// src/classes/getSizes.js
+// =================================================
+// Obtains the sizes of each of the links, adding
+// the "size" attribute to each li element, and setting
+// the size in kb/mb/gb etc on each element
+
+function GetSizes() {
+    this.SIZE_LOADED = "red"; //The text colour of the size once loaded
+    this.SIZE_WAITING = "green"; //The text colour of the size when waiting on audio size
+    this.sizes = [];
+}
+
+GetSizes.prototype = {
+    update: function(qualities) {
+        var _this = this;
+
+        // Main window
+        this.getSize(qualities, $downloadBtnInfo.find("span"), function($span, size) {
+            _this.updateDisplay(qualities, $span, size, true);
+        });
+
+        // Drop down list
+        $lis = $("#options").find("li");
+        for (var i = 0; i<$lis.length; i++) {
+            this.getSize(qualities, $lis.eq(i), function($li, size) {
+                _this.updateDisplay(qualities, $li, size);
+            });
+        }
+    },
+    getSize: function(qualities, $li, callback) {
+        var link = $li.attr("link");
+
+        // Attempt to obtain the size from the qualities values
+        var matchedQualities = qualities.listMatches("val", $li.attr("value"));
+        var size = (matchedQualities.length > 0) ? matchedQualities[0].size : false;
+
+        if (size) {
+            callback($li, size);
+        } else if ($li.attr("type") === "mp3") {
+            var kbps = Math.abs($li.attr("value"));
+            var bytes_per_second = kbps / 8 * 10d00;
+            size = bytes_per_second * global_properties.duration;
+            callback($li, size);
+        } else {
+            // We must make a cross-domain request to determine the size from the return headers...
+            GM_xmlhttpRequest({
+                method:'HEAD',
+                url:link,
+                onload:function(xhr) {
+                    if (xhr.readyState === 4 && xhr.status === 200) { //If it's okay
+                        size = 0;
+                        if (typeof xhr.getResponseHeader === 'function') {
+                            size = xhr.getResponseHeader('Content-length');
+                        } else if (xhr.responseHeaders){
+                            var match = /length: (.*)/.exec(xhr.responseHeaders);
+                            if (match){
+                                size = match[1];
+                            }
+                        }
+                        callback($li, size);
+                    }
+                }
+            });
+        }
+    },
+
+    // Updates the display
+    updateDisplay: function(qualities, $li, size, forceNeutralFloat) {
+        // Attempt to obtain the size from the qualities values
+        var matchedQualities = qualities.listMatches("val", $li.attr("value"));
+        if (matchedQualities.length > 0) {
+            matchedQualities[0].size = size;
+        }
+
+        var _this = this;
+        var color = ($li.attr("requiresAudio") === "true") ? this.SIZE_WAITING : this.SIZE_LOADED;
+
+        // Attempt to obtain the size from the qualities values
+        var matchedQualities = qualities.listMatches("val", $li.attr("value"));
+        var size = (matchedQualities.length > 0) ? matchedQualities[0].size : false;
+
+        // If the span doesn't already exist, add it
+        var extraClass = (forceNeutralFloat) ? " floatNormal" : "";
+        if ($li.find("span.size").length === 0) {
+            $li.append($("<span>", {
+                html:FormatSize(size),
+                style:"color:"+color,
+                class:"size ignoreMouse"+extraClass
+            }));
+        }
+
+        // If it is of the DASH format
+        if ($li.attr("requiresAudio") === "true") {
+            if (global_properties.audio_size){
+                // Let the size be the sum of the size and the audio size
+                size = parseInt(size) + parseInt(global_properties.audio_size);
+
+                $li.find("span.size").html(FormatSize(size));
+                $li.find("span.size").css("color", this.SIZE_LOADED);
+                $li.attr("size", size);
+
+            } else {
+                // Try again in 2 seconds
+                setTimeout(function() {
+                    _this.updateDisplay(qualities, $li, size);
+                }, 2000);
+            }
+        }
+    },
+
+    // Takes the input in bytes, and returns a formatted string
+    formatSize: function(size) {
+        size = parseInt(size, 10);
+        var sizes = {
+            GB:Math.pow(1024,3),
+            MB:Math.pow(1024,2),
+            KB:Math.pow(1024,1),
+        };
+
+        // Default of 0MB
+        var returnSize = "0MB";
+
+        for (sizeFormat in sizes){
+            if (sizes.hasOwnProperty(sizeFormat)) {
+                var minSize = sizes[sizeFormat];
+                if (size > minSize) {
+                    returnSize = (size/minSize).toFixed(SIZE_DP) + sizeFormat;
+                    break;
+                }
+            }
+        }
+
+        // Return the string of return size
+        return returnSize;
+    }
+}
+
+// src/classes/interval.js
+// =================================================
+// This class describes an object that handles the functions
+// that are being called repeatedly in the execution of the
+// script
 function Interval(params) {
     this.params = params || {};
     this.exec = 0;
@@ -107,30 +288,343 @@ function Interval(params) {
 
     // If processes exists, add it
     if (processes) {
-        processes.push(this);    
+        processes.push(this);
     }
-    
+
     // Run the make function if it exists
     if (this.make) {
-        this[this.make]();  
+        this[this.make]();
     }
 }
 
-Interval.prototype.kill = function(remove) {
-    var $div = $("#"+this.id);
-    if ($div.length > 0) {
-        $div.remove();
+Interval.prototype = {
+    kill: function(remove) {
+        var $div = $("#"+this.id);
+        if ($div.length > 0) {
+            $div.remove();
+        }
+        clearInterval(this.interval);
+        this.active = false;
+    },
+    resume: function() {
+        this.exec = 0;
+        this[this.make]();
     }
-    clearInterval(this.interval);
-    this.active = false;
 };
 
-Interval.prototype.resume = function() {
-    this.exec = 0;
-    this[this.make]();
+// src/classes/qualities.js
+// =================================================
+// This class handles the qualities that can be downloaded
+// This class also manages the the display of qualities (both
+// the top quality and the list of qualities)
+function Qualities() {
+	this.items = [];
+}
+
+Qualities.prototype = {
+	reset: function() {
+		this.items = [];
+	},
+	pushItem: function(item) {
+		this.items.push(item);
+	},
+	sortItems: function() {
+		var _this = this;
+		qualities.items.sort(_this.sortDescending);
+	},
+	sortDescending: function(a, b) {
+	    if (isNaN(a.val)) a.val = 0;
+	    if (isNaN(b.val)) b.val = 0;
+	    return Number(b.val) - Number(a.val);
+	},
+	sortDisplay: function($downloadBtnInfo, $options){
+		//Fallback options
+		var qualitySet = false;
+		var $firstSpanInfo;
+
+		//Reset
+		$downloadBtnInfo.html("");
+		$options.html("");
+		for (i = 0; i<this.items.length; i++){
+			var quality = this.items[i];
+			var display = (quality.hidden) ? "none" : "inherit";
+			$li = $("<li>", {
+				html:quality.text,
+				value:quality.val,
+				link:quality.link,
+				type:quality.type,
+				label:quality.label,
+				style:"display:"+display,
+				requiresAudio:quality.requiresAudio,
+				mp3:quality.mp3,
+				size:quality.size
+			});
+
+			// Tags
+			$tags = GetTags($li);
+			for (var j = 0; j<$tags.length; j++) $li.append($tags[j].clone());
+
+			// For the top bar
+			var $spanInfo = $("<span>", {
+				html:quality.text,
+				label:$li.attr("label"), 
+				link:$li.attr("link"), 
+				type:$li.attr("type"), 
+				requiresAudio:$li.attr("requiresAudio"), 
+				mp3:$li.attr("mp3"),
+				value:quality.val
+			});
+			if (!$firstSpanInfo) $firstSpanInfo = $spanInfo;
+
+			// Add tags to info
+			// for (var j = 0; j<$tags.length; j++) $spanInfo.append($tags[j].clone());
+			
+			// If it matches the set quality, assign it to the info box
+			if (Number($li.attr("value")) === global_settings.quality && $li.attr("type") === global_settings.type && !qualitySet){
+				$downloadBtnInfo.append($spanInfo).append($downArrow);
+				qualitySet = true;
+			} 
+			$options.append($li);
+		}
+
+		// If no quality is set
+		if (!qualitySet){
+			$downloadBtnInfo.append($firstSpanInfo).append($downArrow);
+		}
+
+		return $options;
+	}
 };
 
-// This function adds styling to the page
+// src/classes/signature.js
+// =================================================
+function Signature() {
+    this.STORAGE_URL  = "download-youtube-script-url";
+    this.STORAGE_CODE = "download-youtube-signature-code";
+    this.STORAGE_DASH = "download-youtube-dash-enabled";
+
+    //this.fetchSignatureScript(callback);
+}
+
+Signature.prototype = {
+    fetchSignatureScript: function(callback) {
+        if (global_settings.signature_decrypt) callback();
+
+        var _this = this;
+        var storageURL  = this.STORAGE_URL;
+        var storageCode = this.STORAGE_CODE;
+        var scriptURL   = this.getScriptURL(ytplayer.config.assets.js);
+        console.log(scriptURL);
+        if (!(/,0,|^0,|,0$|\-/.test(storageCode))) {
+            storageCode = null; // hack for only positive items
+        }
+
+        console.log(scriptURL);
+
+        try {
+          isSignatureUpdatingStarted=true;
+          GM_xmlhttpRequest({
+            method:"GET",
+            url:scriptURL,
+            onload:function(response) {
+                if (response.readyState === 4 && response.status === 200) {
+                    _this.findSignatureCode(response.responseText);
+                    callback();
+                }
+            }
+          });
+        } catch(e) { }
+    },
+    getScriptURL: function(scriptURL) {
+        var split = scriptURL.split("//");
+        if (split[0] === "") {
+            split.shift();
+            scriptURL = window.location.href.split(":")[0] + "://" + split.join("//");
+        }
+
+        return scriptURL;
+    },
+    isValidSignatureCode: function(arr) { // valid values: '5,-3,0,2,5', 'error'
+        var valid = false;
+        var split = arr.split(",");
+        var length = split.length;
+        if (arr === "error") {
+            valid = true;
+        } else if (length > 1) {
+            // Ensure that every value is an INTEGER
+            for (var i = 0; i<length; i++) {
+                if (!this.isInteger(parseInt(split[i],10))) {
+                    valid = false;
+                }
+            }
+        }
+
+        return valid;
+    },
+    isInteger: function(n) {
+        return (typeof n==='number' && n%1==0);
+    },
+    findSignatureCode: function(sourceCode) {
+        console.log("MINE================");
+        // Signature function name
+        var sigCodes = [
+            this.regMatch(sourceCode, /\.set\s*\("signature"\s*,\s*([a-zA-Z0-9_$][\w$]*)\(/),
+            this.regMatch(sourceCode, /\.sig\s*\|\|\s*([a-zA-Z0-9_$][\w$]*)\(/),
+            this.regMatch(sourceCode, /\.signature\s*=\s*([a-zA-Z_$][\w$]*)\([a-zA-Z_$][\w$]*\)/)
+        ];
+
+        var sigFuncName = this.getFirstValid(sigCodes);
+        var binary = [];
+        binary.push(sourceCode);
+        //SaveToDisk(URL.createObjectURL(new Blob(binary, {type: "application/js"})), {title:"hi", type:".js"});
+        assert(sigFuncName !== null, "Signature function name not found!");
+
+
+        // Regcode (1,2) - used for functionCode
+        var regCodes = [
+            this.regMatch(sourceCode, sigFuncName + '\\s*=\\s*function' +
+            '\\s*\\([\\w$]*\\)\\s*{[\\w$]*=[\\w$]*\\.split\\(""\\);\n*(.+);return [\\w$]*\\.join'),
+            this.regMatch(sourceCode, 'function \\s*' + sigFuncName +
+            '\\s*\\([\\w$]*\\)\\s*{[\\w$]*=[\\w$]*\\.split\\(""\\);\n*(.+);return [\\w$]*\\.join')
+        ];
+
+        var funcCode = this.getFirstValid(regCodes);
+
+        // Slice function name
+        var sliceFuncName = this.regMatch(sourceCode, /([\w$]*)\s*:\s*function\s*\(\s*[\w$]*\s*,\s*[\w$]*\s*\)\s*{\s*(?:return\s*)?[\w$]*\.(?:slice|splice)\(.+\)\s*}/);
+
+        // Reverse function name
+        var reverseFuncName = this.regMatch(sourceCode, /([\w$]*)\s*:\s*function\s*\(\s*[\w$]*\s*\)\s*{\s*(?:return\s*)?[\w$]*\.reverse\s*\(\s*\)\s*}/);
+
+        // Possible methods
+        var methods = {
+            slice:   '\\.(?:'+'slice'+(sliceFuncName?'|'+sliceFuncName:'')+
+                     ')\\s*\\(\\s*(?:[a-zA-Z_$][\\w$]*\\s*,)?\\s*([0-9]+)\\s*\\)',
+            reverse: '\\.(?:'+'reverse'+(reverseFuncName?'|'+reverseFuncName:'')+
+                     ')\\s*\\([^\\)]*\\)',
+            swap:    '[\\w$]+\\s*\\(\\s*[\\w$]+\\s*,\\s*([0-9]+)\\s*\\)',
+            inline:  '[\\w$]+\\[0\\]\\s*=\\s*[\\w$]+\\[([0-9]+)\\s*%\\s*[\\w$]+\\.length\\]'
+        };
+
+        console.log("funcCode:", funcCode);
+        console.log("sliceFuncName:", sliceFuncName);
+        console.log("reverseFuncName:", reverseFuncName);
+
+        var decodeArray = [];
+        var codeLines = funcCode.split(';');
+        for (var i = 0; i<codeLines.length; i++) {
+            var codeLine = codeLines[i].trim();
+
+            if (codeLine.length > 0) {
+                var arrSlice   = codeLine.match(methods.slice);
+                var arrReverse = codeLine.match(methods.reverse);
+
+                // Use slice method
+                if (arrSlice && arrSlice.length >= 2) {
+                    var slice = parseInt(arrSlice[1], 10);
+                    assert(this.isInteger(slice), "Not integer");
+                    decodeArray.push(-slice);
+
+                // Reverse
+                } else if (arrReverse && arrReverse.length >= 1) {
+                    decodeArray.push(0);
+
+                // Inline swap
+                } else if (codeLine.indexOf('[0]') >= 0) { // inline swap
+                    var nextLine = codeLines[i+1].trim();
+                    var hasLength = (nextLine.indexOf(".length") >= 0);
+                    var hasZero =   (nextLine.indexOf("[0]") >= 0);
+
+                    if (nextLine && hasLength && hasZero) {
+                        var inline = this.regMatch(nextLine, methods.inline);
+                        inline = parseInt(inline, 10);
+                        decodeArray.push(inline);
+                        i += 2;
+                    }
+
+                // Swap
+                } else if (codeLine.indexOf(',') >= 0) {
+                    var swap = this.regMatch(codeLine, methods.swap);      
+                    swap = parseInt(swap, 10);
+                    assert(this.isInteger(swap) && swap > 0)
+                    decodeArray.push(swap); 
+                }
+            }
+        }
+
+        global_settings.signature_decrypt = decodeArray;
+        UpdateGlobalSettings();
+        console.log(decodeArray);
+    },
+    regMatch: function(string, regex) {
+        if (typeof(regex) === "string") {
+            regex = new RegExp(regex);
+        }
+
+        var result = regex.exec(string);
+        console.log(regex);
+        console.log(result);
+
+
+        if (result) {
+            result = result[1];
+        }
+
+        return result;
+    },
+    getFirstValid: function(arr) {
+        var val = null;
+        for (var i = 0; i<arr.length; i++) {
+            if (arr[i]) {
+                val = arr[i];
+                break;
+            }
+        }
+
+        return val;
+    },
+    decryptSignature: function(url) {
+        function swap(a, b) {
+            var c=a[0];
+            a[0]=a[b%a.length];
+            a[b]=c;
+            return a
+        };
+        function decode(sig, arr) { // encoded decryption
+            var sigA = sig.split("");
+            for (var i = 0; i<arr.length; i++) {
+                var act = arr[i];
+                sigA = (act>0)?swap(sigA, act):((act==0)?sigA.reverse():sigA.slice(-act));
+            }
+
+            var result = sigA.join("");
+            return result;
+        }
+        
+        url = decodeURIComponent(url);
+        var sig = url.getSetting("signature") || url.getSetting("sig");
+        var s = url.getSetting("s");
+
+        // Decryption is only required if signature is non-existant AND
+        // there is an encrypted property (s)
+        if (!sig) {
+            assert(s !== undefined);
+            sig = decode(s, global_settings.signature_decrypt);
+            url = url.setSetting("itag", sig);
+        }
+
+        url = url.setSetting("signature", sig);
+        url = url.setSetting("ratebypass", "1");
+        console.log(url);
+        return sig;
+    }
+    
+};
+
+// src/css.js
+// =================================================
+// This function adds styling to the page by
+// injecting CSS into the document
 (function() {
     var css = [
         ".disabled{ cursor:default!important}",
@@ -151,15 +645,17 @@ Interval.prototype.resume = function() {
         ".ignoreMouse{ pointer-events:none;}"
     ];
 
-    $("<style type='text/css'>"+css.join("\n")+"</style>").appendTo("head");
+    // Append the CSS to the document
+    var node = document.createElement("style");
+    node.innerHTML = css.join("\n");
+    document.body.appendChild(node);
 })();
 
-
+// src/main.js
+// =================================================
 //Constants
 var IFRAME_WAIT = 20; //Amount of time to wait for iframe requests (to download)
 var YQL_WAIT = 20; //Amount of time to wait for YQL (savedeo) requests
-var SIZE_LOADED = "red"; //The text colour of the size once loaded
-var SIZE_WAITING = "green"; //The text colour of the size when waiting on audio size
 var SIZE_DP = 1; //Amount of decimal places for size
 var MP3_WAIT = 10; //Amount of time to wait for mp3 to download
 
@@ -173,7 +669,8 @@ var default_setings = {           //Default settings
     'ignoreMuted':true,           //Ignore muted
     'ignoreTypes':["webm"],       //Ignore webm types (muxing doesn't work atm)
     'type':'mp4',                 //Default type
-    'label':true                  //Have quality label on download
+    'label':true,                 //Have quality label on download
+    'signature':false
 };
 var audios = [128, 192, 256];
 var processes = [];
@@ -184,25 +681,54 @@ var global_properties = {
 
 SetupGlobalSettings(); //Ensures that all global_settings are set... if not, refer to default_settings
 
-var $downloadIcon = $("<img>", {style:'margin-right:4.5px', class:'midalign', src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA3ElEQVQ4T6WT7RHBQBCGn1RAB3RAB6hAVEA6oAI6QAdK0AE6oIOkAx0wb+bO7NxskjHZP7m53ffZj9tk9LSsp542wBgYhQQv4O0l8wBD4AhsEsEF2KUgD/AEJg2tybewEAvIgTWgb5upilMMiIArsExUD2Ae7u7ALJxLYAWomnqIB2DvpGwCxFAlLQTwepZY99sQrZKnpooIOQvwcbJr4oXzCpqRtVIA2591WojOqVixlQAa1K1h7BIqxhNLUrcg09Koz8Efq6055ekixWfr4mitf8/YFdzq7/03fgFd3CYQgbnh+gAAAABJRU5ErkJggg=="});
-var $downArrow = $("<img>", {style:'margin-left:6px;', class:'midalign', src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAAV0lEQVQoU2NkIBEwkqiegXQNc+fOTWBkZJxPjE3///9PBNtAjCaQ4uTk5AVwJ+HTBFMMMhzFD9g0ISvG0IDuPHTFWDXANIFokJvRA4P0YCUmOJHVkGwDAPVTKkQsO0MlAAAAAElFTkSuQmCC"});
+// Manage the sizes
+var sizes = new GetSizes();
+var qualities = new Qualities();
+var signature = new Signature();
+console.log(signature);
+//signature.fetchSignatureScript();
+
+// Sprites
+var $downloadIcon = $("<img>", {
+    style:"margin-right:4.5px",
+    class:'midalign',
+    src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA3ElEQVQ4T6WT7RHBQBCGn1RAB3RAB6hAVEA6oAI6QAdK0AE6oIOkAx0wb+bO7NxskjHZP7m53ffZj9tk9LSsp542wBgYhQQv4O0l8wBD4AhsEsEF2KUgD/AEJg2tybewEAvIgTWgb5upilMMiIArsExUD2Ae7u7ALJxLYAWomnqIB2DvpGwCxFAlLQTwepZY99sQrZKnpooIOQvwcbJr4oXzCpqRtVIA2591WojOqVixlQAa1K1h7BIqxhNLUrcg09Koz8Efq6055ekixWfr4mitf8/YFdzq7/03fgFd3CYQgbnh+gAAAABJRU5ErkJggg=="
+});
+var $downArrow = $("<img>", {
+    style:"margin-left:6px;",
+    class:'midalign',
+    src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAAV0lEQVQoU2NkIBEwkqiegXQNc+fOTWBkZJxPjE3///9PBNtAjCaQ4uTk5AVwJ+HTBFMMMhzFD9g0ISvG0IDuPHTFWDXANIFokJvRA4P0YCUmOJHVkGwDAPVTKkQsO0MlAAAAAElFTkSuQmCC"
+});
 
 /* -----------------  PART I, the local handler  ----------------------- */
 $(document).ready(function(){
-    Program();
+    signature.fetchSignatureScript(Program);
 });
 
-//This function is run on every new page load.... should be used to reset global variables
-function Program(){
+// This function is run on every new page load.... should be used to reset global variables
+function Program() {
+    //console.log(ytplayer.config.assets.js);
+    //console.log(ytplayer.config.args.adaptive_fmts);
+    //console.log(ytplayer.config.args.dashmpd);
+    //console.log(ytplayer.config.args.url_encoded_fmt_stream_map);
+    //console.log(ytplayer.config.args.url_encoded_fmt_stream_map);
+
+
+    var url = ytplayer.config.args.adaptive_fmts.getSetting("url", 1);
+    console.log(url);
+    alert(signature.decryptSignature(url));
+
+    ytplayer.config.
 
     KillProcesses();
-    if (window.location.href.indexOf("watch") > -1){
-        //Reset global properties
+    if (window.location.href.indexOf("watch") > -1) {
+        // Reset global properties
         global_properties = {
             audio_size:false,
             duration:false
         };
-        qualities = [];
+        console.log(qualities);
+        qualities.reset();
         var exempt = ["1080p (no audio)", "480p (no audio)"];
         var reqAudioKeep = [72060, 72060000, 108060, 108060000, 1080, 1080000, 480, 480000];
         $("#downloadBtnCont").remove();
@@ -241,13 +767,13 @@ function Program(){
                         global_properties.audio_size = size;
                     });
                 }
-                qualities.push({
+                qualities.pushItem({
                     val:val, 
                     link:link, 
                     text:text, 
                     type:type, 
                     hidden:hidden, 
-                    requiresAudio:requiresAudio, 
+                    requiresAudio:requiresAudio,
                     label:label
                 });
             });
@@ -255,7 +781,7 @@ function Program(){
             var redirect = "http://peggo.co/dvr/"+window.location.href.getSetting("v")+"?hi";
             for (i = 0; i<audios.length; i++){
                 if (global_settings.ignoreTypes.indexOf("mp3") === -1){
-                    qualities.push({
+                    qualities.pushItem({
                         val:-audios[i], 
                         link:redirect+"&q="+audios[i], 
                         text:audios[i].toString()+"kbps ", 
@@ -265,7 +791,7 @@ function Program(){
                     });
                 }
             }
-            qualities.sort(QualitySort);
+            qualities.sortItems();
 
             $downBtn = DownloadButton("Download");
 
@@ -275,7 +801,7 @@ function Program(){
                 class:"unselectable", 
                 style:"display:none;position:absolute"
             });
-            $options = SortQualities($downloadBtnInfo, $options);
+            $options = qualities.sortDisplay($downloadBtnInfo, $options);
             
             //If it already exists, don't bother
             if ($("#downloadBtn").length > 0) return;
@@ -284,26 +810,26 @@ function Program(){
             $options = AdjustOptions($options); //realigns options window
             $("body").prepend($options);
 
-            GetSizes();
+            sizes.update(qualities);
 
-            //Add events to the main frame
+            // Add events to the main frame
             AddEvents();
         });
-/* ---------------  PART II, the external handler  --------------------- */
-} else if (window.location.href.indexOf("google") > -1 && window.location.href.indexOf("youtube") > -1){
-    var link = window.location.href;
-    if (link.split('#').length > 1 && link.split("youtube").length > 1){
-        var settings = JSON.parse(link.split("#")[1].replace(/\%22/g,'"').replace(/%0D/g, "")); //settings is an object including title, remain, link, host, downloadTo
-        $('body').remove(); //Stop video
-        settings.title = decodeURIComponent(settings.title);
-        link = link.split("#")[0]+"&title="+encodeURIComponent(settings.title);
-        SaveToDisk(link, settings); //Save
-        $(window).ready(function(){
-            window.parent.postMessage({origin:settings.host, id:settings.id.toString()}, settings.host);
-        });
-    }
-/* -----------------  PART III, MP3 Handler  ----------------------- */ 
-} else if (window.location.href.indexOf("peggo") > -1){
+    /* ---------------  PART II, the external handler  --------------------- */
+    } else if (window.location.href.indexOf("google") > -1 && window.location.href.indexOf("youtube") > -1){
+        var link = window.location.href;
+        if (link.split('#').length > 1 && link.split("youtube").length > 1){
+            var settings = JSON.parse(link.split("#")[1].replace(/\%22/g,'"').replace(/%0D/g, "")); //settings is an object including title, remain, link, host, downloadTo
+            $('body').remove(); //Stop video
+            settings.title = decodeURIComponent(settings.title);
+            link = link.split("#")[0]+"&title="+encodeURIComponent(settings.title);
+            SaveToDisk(link, settings); //Save
+            $(window).ready(function(){
+                window.parent.postMessage({origin:settings.host, id:settings.id.toString()}, settings.host);
+            });
+        }
+    /* -----------------  PART III, MP3 Handler  ----------------------- */
+    } else if (window.location.href.indexOf("peggo") > -1) {
         $(document).ready(function(){
             var lightbox = new Lightbox("Notice", $("<div>", {
                 style:'margin-bottom:1em', 
@@ -409,7 +935,7 @@ function GetVid(link, type, requiresAudio, label, mp3){ //Force the download to 
     var host = GetHost();
     var title = GetTitle(label);
     var settings = {"title":encodeURIComponent(title), "host":host, "type":type, "id":idCount, "label":label};
-    link = link.getAfter("&title=", "&");
+    link = link.getSetting("title");
 
     var $iframe = $("<iframe>", { //Send video to other script to be downloaded.
         src: link+"#"+JSON.stringify(settings),
@@ -488,62 +1014,6 @@ function SaveToDisk(link, settings){
     save.click();
 }
 
-function SortQualities($downloadBtnInfo, $options){
-    //Fallback options
-    var qualitySet = false;
-    var $firstSpanInfo;
-    
-    //Reset
-    $downloadBtnInfo.html("");
-    $options.html("");
-    for (i = 0; i<qualities.length; i++){
-        var quality = qualities[i];
-        var display = (quality.hidden) ? "none" : "inherit";
-        $li = $("<li>", {
-            html:quality.text,
-            value:quality.val,
-            link:quality.link,
-            type:quality.type,
-            label:quality.label,
-            style:"display:"+display,
-            requiresAudio:quality.requiresAudio,
-            mp3:quality.mp3,
-            size:quality.size
-        });
-
-        //Tags
-        $tags = GetTags($li);
-        for (var j = 0; j<$tags.length; j++) $li.append($tags[j].clone());
-
-        //For the top bar
-        var $spanInfo = $("<span>", {
-            html:quality.text,
-            label:$li.attr("label"), 
-            link:$li.attr("link"), 
-            type:$li.attr("type"), 
-            requiresAudio:$li.attr("requiresAudio"), 
-            mp3:$li.attr("mp3"),
-            value:quality.val
-        });
-        if (!$firstSpanInfo) $firstSpanInfo = $spanInfo;
-
-        //Add tags to info
-        //for (var j = 0; j<$tags.length; j++) $spanInfo.append($tags[j].clone());
-        
-        //If it matches the set quality, assign it to the info box
-        if (Number($li.attr("value")) === global_settings.quality && $li.attr("type") === global_settings.type && !qualitySet){
-            $downloadBtnInfo.append($spanInfo).append($downArrow);
-            qualitySet = true;
-        } 
-        $options.append($li);
-    }
-
-    //If no quality is set
-    if (!qualitySet){
-        $downloadBtnInfo.append($firstSpanInfo).append($downArrow);
-    }
-    return $options;
-}
 
 function AddEvents(){ //Adds events to the window
     var $options = $("#options");
@@ -583,8 +1053,8 @@ function AddEvents(){ //Adds events to the window
         global_settings.quality = Number($(this).attr("value"));
         global_settings.type = $(this).attr("type");
         UpdateGlobalSettings();
-        SortQualities($downloadBtnInfo, $options);
-        GetSizes();
+        qualities.sortDisplay($downloadBtnInfo, $options);
+        sizes.update(qualities);
     });
 
     //Hide options on document click
@@ -597,12 +1067,6 @@ function AddEvents(){ //Adds events to the window
 function AdjustOptions($element){ //Readjusts the values of the option window to correctly align it
     $element.css({"left":$("#downloadBtn").offset().left, "top":$("#downloadBtn").offset().top+$("#downloadBtn").height()+$("#downloadBtn").css("border-top-width").replace("px","")*2});
     return $element;
-}
-
-function QualitySort(a, b){
-    if (isNaN(a.val)) a.val = 0;
-    if (isNaN(b.val)) b.val = 0;
-    return Number(b.val) - Number(a.val);
 }
 
 //Global settings handling
@@ -695,118 +1159,6 @@ function KillProcesses(){
         processes.splice(i, 1);
         i--;
     }
-}
-
-function GetSizes(){
-    //Main window
-    GetSize($downloadBtnInfo.find("span"), function($span, size){
-        GetSizesCallback($span, size, true);
-    });
-
-    //Drop down list
-    $lis = $("#options").find("li");
-    for (var i = 0; i<$lis.length; i++){
-        GetSize($lis.eq(i), function($li, size){
-            GetSizesCallback($li, size);
-        });
-    }
-}
-
-function GetSizesCallback($li, size, forceNeutralFloat){
-    var color = ($li.attr("requiresAudio") === "true") ? SIZE_WAITING : SIZE_LOADED;
-    
-    //Set the respective quantity to the found size, so as the size only needs to be obtained once
-    var quality = qualities.listMatches("val", $li.attr("value"));
-    if (quality.length > 0){
-        quality[0].size = size;
-    }
-
-    //If the span doesn't already exist, add it
-    var extraClass = (forceNeutralFloat) ? " floatNormal" : "";
-    if ($li.find("span.size").length === 0){
-        $li.append($("<span>", {
-            html:FormatSize(size),
-            style:"color:"+color,
-            class:"size ignoreMouse"+extraClass
-        }));
-    }
-
-    //If it is of the DASH format
-    if ($li.attr("requiresAudio") === "true"){
-        if (global_properties.audio_size){
-            size = parseInt(size) + parseInt(global_properties.audio_size)
-            $li.find("span.size").html(FormatSize(size));
-            $li.find("span.size").css("color", SIZE_LOADED);
-            $li.attr("size", size);
-
-        } else {
-            //Try again in 2 seconds
-            setTimeout(function(){
-                GetSizesCallback($li, size);
-            }, 2000);
-        }
-    }
-}
-
-function GetSize($li, callback){
-    var link = $li.attr("link");
-    var size = link.getSetting("clen");
-    var quality = qualities.listMatches("val", $li.attr("value"));
-    if (quality.length > 0){
-        size = quality[0].size;
-    }
-
-    if ($li.attr("type") === "mp3") {
-        var kbps = Math.abs($li.attr("value"));
-        var bytes_per_second = kbps / 8 * 1000;
-        var size = bytes_per_second * global_properties.duration;
-        callback($li, size);
-    }
-    else if (size){
-        callback($li, size);
-    } else {
-        //We must make a cross-domain request to determine the size from the return headers...
-        GM_xmlhttpRequest({
-            method:'HEAD',
-            url:link,
-            onload:function(xhr){
-                if (xhr.readyState === 4 && xhr.status === 200) { //If it's okay
-                    var size = 0;
-                    if (typeof xhr.getResponseHeader === 'function'){
-                        size = xhr.getResponseHeader('Content-length');
-                    } else if (xhr.responseHeaders){
-                        var match = /length: (.*)/.exec(xhr.responseHeaders);
-                        if (match){
-                            size = match[1];
-                        }
-                    }
-                    callback($li, size);
-                }
-            }
-        });
-    }
-}
-
-function FormatSize(size){
-    size = parseInt(size, 10);
-    var sizes = {
-        GB:Math.pow(1024,3),
-        MB:Math.pow(1024,2),
-        KB:Math.pow(1024,1),
-    };
-    var returnSize;
-
-    for (sizeFormat in sizes){
-        if (sizes.hasOwnProperty(sizeFormat)){
-            var minSize = sizes[sizeFormat];
-            if (size > minSize){
-                returnSize = (size/minSize).toFixed(SIZE_DP) + sizeFormat;
-                break;
-            }
-        }
-    }
-
-    return returnSize;
 }
 
 //Returns a jquery element of the download button with a certain text

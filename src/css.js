@@ -1,4 +1,5 @@
-// This function adds styling to the page
+// This function adds styling to the page by
+// injecting CSS into the document
 (function() {
     var css = [
         ".disabled{ cursor:default!important}",
@@ -19,5 +20,8 @@
         ".ignoreMouse{ pointer-events:none;}"
     ];
 
-    $("<style type='text/css'>"+css.join("\n")+"</style>").appendTo("head");
+    // Append the CSS to the document
+    var node = document.createElement("style");
+    node.innerHTML = css.join("\n");
+    document.body.appendChild(node);
 })();
