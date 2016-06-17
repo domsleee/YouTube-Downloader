@@ -17,7 +17,7 @@ module.exports = function(grunt) {
                 separator: "\n\n"
             },
             dist: {
-                src: ["src/header.js", "src/prototypes.js", "src/classes/*.js", "src/*.js"],
+                src: ["src/header.js", "src/prototypes.js", "src/classes/**/*.js", "src/*.js"],
                 dest: "main.js"
             }
         },

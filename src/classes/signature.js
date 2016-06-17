@@ -1,9 +1,9 @@
-function Signature() {
-    this.STORAGE_URL  = "download-youtube-script-url";
-    this.STORAGE_CODE = "download-youtube-signature-code";
-    this.STORAGE_DASH = "download-youtube-dash-enabled";
+// Gets the signature code from YouTube in order
+// to be able to correctly decrypt direct links
+// USES: ytplayer.config.assets.js
 
-    //this.fetchSignatureScript(callback);
+function Signature() {
+    // constructor
 }
 
 Signature.prototype = {
@@ -11,28 +11,22 @@ Signature.prototype = {
         if (global_settings.signature_decrypt) callback();
 
         var _this = this;
-        var storageURL  = this.STORAGE_URL;
-        var storageCode = this.STORAGE_CODE;
-        var scriptURL   = this.getScriptURL(ytplayer.config.assets.js);
-        console.log(scriptURL);
-        if (!(/,0,|^0,|,0$|\-/.test(storageCode))) {
+        var scriptURL = this.getScriptURL(ytplayer.config.assets.js);
+        if (!(/,0,|^0,|,0$|\-/.test(global_settings.signature_decrypt))) {
             storageCode = null; // hack for only positive items
         }
 
-        console.log(scriptURL);
-
         try {
-          isSignatureUpdatingStarted=true;
-          GM_xmlhttpRequest({
-            method:"GET",
-            url:scriptURL,
-            onload:function(response) {
-                if (response.readyState === 4 && response.status === 200) {
-                    _this.findSignatureCode(response.responseText);
-                    callback();
+            GM_xmlhttpRequest({
+                method:"GET",
+                url:scriptURL,
+                onload:function(response) {
+                    if (response.readyState === 4 && response.status === 200) {
+                        _this.findSignatureCode(response.responseText);
+                        callback();
+                    }
                 }
-            }
-          });
+            });
         } catch(e) { }
     },
     getScriptURL: function(scriptURL) {
@@ -44,28 +38,10 @@ Signature.prototype = {
 
         return scriptURL;
     },
-    isValidSignatureCode: function(arr) { // valid values: '5,-3,0,2,5', 'error'
-        var valid = false;
-        var split = arr.split(",");
-        var length = split.length;
-        if (arr === "error") {
-            valid = true;
-        } else if (length > 1) {
-            // Ensure that every value is an INTEGER
-            for (var i = 0; i<length; i++) {
-                if (!this.isInteger(parseInt(split[i],10))) {
-                    valid = false;
-                }
-            }
-        }
-
-        return valid;
-    },
     isInteger: function(n) {
         return (typeof n==='number' && n%1==0);
     },
     findSignatureCode: function(sourceCode) {
-        console.log("MINE================");
         // Signature function name
         var sigCodes = [
             this.regMatch(sourceCode, /\.set\s*\("signature"\s*,\s*([a-zA-Z0-9_$][\w$]*)\(/),
@@ -106,10 +82,6 @@ Signature.prototype = {
             inline:  '[\\w$]+\\[0\\]\\s*=\\s*[\\w$]+\\[([0-9]+)\\s*%\\s*[\\w$]+\\.length\\]'
         };
 
-        console.log("funcCode:", funcCode);
-        console.log("sliceFuncName:", sliceFuncName);
-        console.log("reverseFuncName:", reverseFuncName);
-
         var decodeArray = [];
         var codeLines = funcCode.split(';');
         for (var i = 0; i<codeLines.length; i++) {
@@ -144,17 +116,35 @@ Signature.prototype = {
 
                 // Swap
                 } else if (codeLine.indexOf(',') >= 0) {
-                    var swap = this.regMatch(codeLine, methods.swap);      
+                    var swap = this.regMatch(codeLine, methods.swap);
                     swap = parseInt(swap, 10);
                     assert(this.isInteger(swap) && swap > 0)
-                    decodeArray.push(swap); 
+                    decodeArray.push(swap);
                 }
             }
         }
 
+        // Make sure it is a valid signature
+        assert(this.isValidSignatureCode(decodeArray));
+
         global_settings.signature_decrypt = decodeArray;
         UpdateGlobalSettings();
-        console.log(decodeArray);
+    },
+    isValidSignatureCode: function(arr) {
+        var valid = false;
+        var length = arr.length;
+        if (length > 1) {
+            valid = true;
+
+            // Ensure that every value is an INTEGER
+            for (var i = 0; i<length; i++) {
+                if (!this.isInteger(parseInt(arr[i],10))) {
+                    valid = false;
+                }
+            }
+        }
+
+        return valid;
     },
     regMatch: function(string, regex) {
         if (typeof(regex) === "string") {
@@ -162,10 +152,6 @@ Signature.prototype = {
         }
 
         var result = regex.exec(string);
-        console.log(regex);
-        console.log(result);
-
-
         if (result) {
             result = result[1];
         }
@@ -200,7 +186,7 @@ Signature.prototype = {
             var result = sigA.join("");
             return result;
         }
-        
+
         url = decodeURIComponent(url);
         var sig = url.getSetting("signature") || url.getSetting("sig");
         var s = url.getSetting("s");
@@ -215,8 +201,6 @@ Signature.prototype = {
 
         url = url.setSetting("signature", sig);
         url = url.setSetting("ratebypass", "1");
-        console.log(url);
         return sig;
     }
-    
 };

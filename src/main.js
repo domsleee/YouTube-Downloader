@@ -27,9 +27,9 @@ var global_properties = {
 SetupGlobalSettings(); //Ensures that all global_settings are set... if not, refer to default_settings
 
 // Manage the sizes
-var sizes = new GetSizes();
-var qualities = new Qualities();
 var signature = new Signature();
+var display = new Display();
+var qualities = new Qualities();
 console.log(signature);
 //signature.fetchSignatureScript();
 
@@ -56,14 +56,7 @@ function Program() {
     //console.log(ytplayer.config.args.adaptive_fmts);
     //console.log(ytplayer.config.args.dashmpd);
     //console.log(ytplayer.config.args.url_encoded_fmt_stream_map);
-    //console.log(ytplayer.config.args.url_encoded_fmt_stream_map);
 
-
-    var url = ytplayer.config.args.adaptive_fmts.getSetting("url", 1);
-    console.log(url);
-    alert(signature.decryptSignature(url));
-
-    ytplayer.config.
 
     KillProcesses();
     if (window.location.href.indexOf("watch") > -1) {
@@ -72,8 +65,8 @@ function Program() {
             audio_size:false,
             duration:false
         };
-        console.log(qualities);
-        qualities.reset();
+        qualities.initialise();
+
         var exempt = ["1080p (no audio)", "480p (no audio)"];
         var reqAudioKeep = [72060, 72060000, 108060, 108060000, 1080, 1080000, 480, 480000];
         $("#downloadBtnCont").remove();
@@ -84,44 +77,7 @@ function Program() {
             var $iframe = $(xhr);
             var videoId = window.location.href.getSetting("v");
             var $rows = $iframe.find("table a[href*="+videoId+"]").parent().parent().parent().parent().find("tbody tr");
-            $rows.each(function(){
-                var requiresAudio = false;
-                var link = $(this).find("td a").attr("href");
-                var text = HandleText($(this).find("th").text());
-                var type = $(this).find("td").eq(0).text();
-                var val = HandleVal(text.split("p")[0], text, type, exempt);
-                var label = (text.split("p").length > 1) ? text.split(" ")[0] : "";
-                var ignoreMuted = (global_settings.ignoreMuted && text.indexOf('no audio') !== -1);
-                var ignoreAudio = (text.indexOf('audio only') !== -1);
-                var ignoreOther = (global_settings.ignoreTypes.indexOf(type) !== -1);
-                var hidden = (ignoreOther || ignoreMuted || ignoreAudio) ? true : false;
-                if (reqAudioKeep.indexOf(Number(val)) > -1 && !ignoreOther){
-                    hidden = false;
-                    requiresAudio = true;
-                    text = text.replace(" (no audio)", "");
-                }
-                var duration = link.getSetting("dur");
-                if (duration){
-                    global_properties.duration = duration;
-                }
-                if (ignoreAudio && type === "m4a"){
-                    var $li = $("<li>", {
-                        link:link
-                    });
-                    GetSize($li, function($li, size){
-                        global_properties.audio_size = size;
-                    });
-                }
-                qualities.pushItem({
-                    val:val, 
-                    link:link, 
-                    text:text, 
-                    type:type, 
-                    hidden:hidden, 
-                    requiresAudio:requiresAudio,
-                    label:label
-                });
-            });
+            
 
             var redirect = "http://peggo.co/dvr/"+window.location.href.getSetting("v")+"?hi";
             for (i = 0; i<audios.length; i++){
@@ -146,7 +102,7 @@ function Program() {
                 class:"unselectable", 
                 style:"display:none;position:absolute"
             });
-            $options = qualities.sortDisplay($downloadBtnInfo, $options);
+            $options = display.initDisplay(qualities, $downloadBtnInfo, $options);
             
             //If it already exists, don't bother
             if ($("#downloadBtn").length > 0) return;
@@ -155,7 +111,7 @@ function Program() {
             $options = AdjustOptions($options); //realigns options window
             $("body").prepend($options);
 
-            sizes.update(qualities);
+            qualities.update();
 
             // Add events to the main frame
             AddEvents();
@@ -228,44 +184,6 @@ if (window.location.href.indexOf("youtube") !== -1){
     }, 100);
 }
 
-function YQL(youtubeURL, callback){ //Makes a call the YQL console with the given youtubeURL
-    Interval.prototype.getYqlCheck = function(){
-        this.req.abort();
-        this.exec += 1;
-        console.log("Checking YQL request for the "+this.exec+" time");
-        if (this.exec > 9){
-            $("#downloadBtn").html("Error Fetching").prepend($downloadIcon);
-            console.log("YQL Error please");
-            this.kill();
-        } else {
-            $("#downloadBtn span").html("Loading...("+(this.exec+1)+")").prepend($downloadIcon);
-            this.makeRequest();
-        }
-    };
-    Interval.prototype.makeYqlGetInterval = function(){
-        var _this = this;
-        this.interval = setInterval(function(){ _this.getYqlCheck()}, YQL_WAIT*1000);
-        this.makeRequest();
-    };
-    Interval.prototype.makeRequest = function(){
-        var _this = this;
-        this.req = $.get("https://query.yahooapis.com/v1/public/yql", {
-            q:"SELECT * FROM html WHERE url='https://www.savedeo.com/download?url="+encodeURIComponent(this.youtubeURL)+"'"
-        }, function(xhr){
-            if ($(xhr).find("tbody tr").length === 0) return;
-            _this.kill();
-            _this.callback(xhr);
-        });
-    };
-    new Interval({'callback':callback, 'buttonId':'downloadBtn', 'make':'makeYqlGetInterval', 'youtubeURL':youtubeURL});
-}
-
-function HandleText(text){ //Return the correct text
-    text = text.replace(/(\r\n|\n|\r)/g,"").replace(/([0-9]{3,4}) p/, "$1p");
-    text = (text.split("x").length > 1) ? text.split("x")[1].trim()+"p" : text;
-    if (text.split("60 fps").length > 1) text = text.split(" (")[0] + "60";
-    return text+ " ";
-}
 function HandleVal(val, text, type, exempt){ //Return the correct value
     if (text.split("p60").length > 1) val += 60;
     if (type === 'mp4') val *= 1000;
@@ -275,89 +193,8 @@ function HandleVal(val, text, type, exempt){ //Return the correct value
     return val;
 }
 
-function GetVid(link, type, requiresAudio, label, mp3){ //Force the download to be started from an iframe
-    if (type === 'mp4' && requiresAudio) type = 'm4v';
-    var host = GetHost();
-    var title = GetTitle(label);
-    var settings = {"title":encodeURIComponent(title), "host":host, "type":type, "id":idCount, "label":label};
-    link = link.getSetting("title");
 
-    var $iframe = $("<iframe>", { //Send video to other script to be downloaded.
-        src: link+"#"+JSON.stringify(settings),
-        style: "width:0;height:0",
-        id: idCount
-    });
-    if (mp3){
-        window.open(link,'Closing in 10 seconds');
-        setTimeout(function(){ $("#downloadBtn").onState()}, 1500);
-    } else {
-        $("body").append($iframe);
-        idCount++;
-        remain ++;
-    }
 
-    Interval.prototype.iframeCheck = function(){ //this.id should refer to the id of the iframe (iframeId)
-        var exist = ($("#"+this.id).length > 0);
-        (exist) ? $('#'+this.id).attr("src", $('#'+this.id).attr("src")) : this.kill()
-        this.exec += 1;
-        if (exist) $("#downloadBtn").html(DownloadButton("Download ("+(this.exec+1)+")").html());
-        console.log("Checking iframe "+this.id+" for the "+this.exec+" time");
-        if (this.exec > 4){
-            console.log("HEUSTON, we have a problem");
-        }
-    };
-    Interval.prototype.makeIframeInterval = function(){
-        var _this = this;
-        this.interval = setInterval(function(){ _this.iframeCheck()}, IFRAME_WAIT*1000);
-    };
-
-    new Interval({id:idCount-1, title:title, make:'makeIframeInterval'});
-    if (requiresAudio === 'true') HandleAudio(settings, type);
-}
-
-function GetHost(){
-    split = ".com";
-    return window.location.href.split(split)[0]+split;
-}
-
-function GetTitle(label){
-    var label = (label) ? label : "";
-    var str = $("title").html().split(" - YouTube")[0].replace(/"/g, "").replace(/'/g, '').replace(/\?/g, '').replace(/:/g, '').replace(/\*/g, '-').replace(/%/g, '');
-    if (global_settings.label) str = str+" "+label.toString();
-    return str;
-}
-
-function HandleAudio(settings, type){
-    GetVid($("#options").find("li:contains('m4a')").attr("link"), "m4a", false, settings.label);
-    settings.title = decodeURIComponent(settings.title);
-    var os = GetOs();
-    var text = MakeScript(settings.title, type, "m4a", "mp4", os);
-    settings.type = os.scriptType;
-    if (os.os === 'win'){
-        SaveToDisk(URL.createObjectURL(text), settings);
-    } else {
-        SaveToDisk("https://github.com/Domination9987/YouTube-Downloader/raw/master/muxer/Muxer.zip", settings);
-    }
-    
-}
-
-function GetOs(){
-    var os = (navigator.appVersion.indexOf("Win") !== -1) ? "win" : "mac";
-    var scriptType = (os === "win") ? "bat" : "command";
-    return {os:os, scriptType:scriptType};
-}
-
-function SaveToDisk(link, settings){
-    var save = document.createElement('a');
-    save.href = link;
-    save.target = '_blank';
-    save.download = settings.title+"."+settings.type || 'unknown';
-    (document.body || document.documentElement).appendChild(save);
-    save.onclick = function() {
-        (document.body || document.documentElement).removeChild(save);
-    };
-    save.click();
-}
 
 
 function AddEvents(){ //Adds events to the window
@@ -369,14 +206,6 @@ function AddEvents(){ //Adds events to the window
         if ($options.length > 0){
             AdjustOptions($options);
         }
-    });
-
-    //Download button click
-    $("#downloadBtn").click(function(){
-        if ($(this).hasClass("disabled")) return;
-        $(this).toggleState();
-        var $span = $("#downloadBtnInfo span");
-        GetVid($span.attr("link"), $span.attr("type"), $span.attr("requiresAudio"), $span.attr("label"), $span.attr("mp3"));
     });
 
     //Realign options on focus/resize
@@ -398,7 +227,7 @@ function AddEvents(){ //Adds events to the window
         global_settings.quality = Number($(this).attr("value"));
         global_settings.type = $(this).attr("type");
         UpdateGlobalSettings();
-        qualities.sortDisplay($downloadBtnInfo, $options);
+        qualities.resetDisplay($downloadBtnInfo, $options);
         sizes.update(qualities);
     });
 
@@ -517,22 +346,4 @@ function DownloadButton(text, disabled){
     }));
 
     return $button;
-}
-
-function GetTags($li){
-    $tags = [];
-    $tags.push($("<span>", {
-        class:"tag ignoreMouse",
-        html:$li.attr("type")
-    }));
-
-    var requiresAudio = $li.attr("requiresAudio");
-    if (requiresAudio && requiresAudio !== "false"){
-        $tags.push($("<span>", {
-            class:"tag ignoreMouse",
-            html:"DASH"
-        }));
-    }
-
-    return $tags;
 }
