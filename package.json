@@ -1,0 +1,15 @@
+{
+	"name": "youtube-downloader",
+	"version": "1.0.0",
+	"description": "dlsjflf",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Domination9987/YouTube-Downloader"
+	},
+	"license": "MIT",
+	"dependencies": {
+		"grunt" : ">1.0.0",
+		"grunt-contrib-concat" : ">=1.0.0",
+		"grunt-contrib-watch" : ">=1.0.0"
+	}
+}
