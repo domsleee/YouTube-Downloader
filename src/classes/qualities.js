@@ -6,6 +6,9 @@ function Qualities() {
 	this.sizes = new GetSizes();
 
 	this.itags = {
+		5: {
+			type:"flv"
+		}
 		17: {
 			resolution:144,
 			type:"3gpp"
@@ -48,8 +51,8 @@ function Qualities() {
 		},
 		137: {
 			resolution:1080,
-			type:"m4v",
-			dash:true
+			type:"mp4",
+			muted:true
 		},
 		140: {
 			audio:true,
@@ -86,8 +89,8 @@ function Qualities() {
 		},
 		248: {
 			resolution:1080,
-			type:"m4v",
-			dash:true
+			type:"webm",
+			muted:true
 		},
 		249: {
 			audio:true,
