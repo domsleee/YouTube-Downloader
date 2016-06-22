@@ -144,6 +144,20 @@ function Display() {
 
     // The text colour of the size when waiting on audio size
     this.SIZE_WAITING = "green";
+
+    // Sprites
+    // Download icon (with cloud)
+    this.$downloadIcon = $("<img>", {
+        style:"margin-right:4.5px",
+        class:'midalign',
+        src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA3ElEQVQ4T6WT7RHBQBCGn1RAB3RAB6hAVEA6oAI6QAdK0AE6oIOkAx0wb+bO7NxskjHZP7m53ffZj9tk9LSsp542wBgYhQQv4O0l8wBD4AhsEsEF2KUgD/AEJg2tybewEAvIgTWgb5upilMMiIArsExUD2Ae7u7ALJxLYAWomnqIB2DvpGwCxFAlLQTwepZY99sQrZKnpooIOQvwcbJr4oXzCpqRtVIA2591WojOqVixlQAa1K1h7BIqxhNLUrcg09Koz8Efq6055ekixWfr4mitf8/YFdzq7/03fgFd3CYQgbnh+gAAAABJRU5ErkJggg=="
+    });
+    // Down select arrow (for dropdown)
+    this.$downArrow = $("<img>", {
+        style:"margin-left:6px;",
+        class:'midalign',
+        src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAAV0lEQVQoU2NkIBEwkqiegXQNc+fOTWBkZJxPjE3///9PBNtAjCaQ4uTk5AVwJ+HTBFMMMhzFD9g0ISvG0IDuPHTFWDXANIFokJvRA4P0YCUmOJHVkGwDAPVTKkQsO0MlAAAAAElFTkSuQmCC"
+    });
 }
 
 Display.prototype = {
@@ -164,15 +178,20 @@ Display.prototype = {
         }
     },
     // Initialises the display
-    initDisplay: function(qualities, $downloadBtnInfo, $options) {
+    initOptions: function(qualities, $downloadBtnInfo) {
         // Fallback options
         var qualitySet = false;
         var $firstSpanInfo;
 
         // Reset
-        $downloadBtnInfo.html("");
-        $options.html("");
-        for (i = 0; i<qualities.items.length; i++){
+        this.updateInfo(false);
+        $options = $("<ul>", {
+            id:"options",
+            class:"unselectable",
+            style:"display:none;position:absolute"
+        });
+
+        for (i = 0; i<qualities.items.length; i++) {
             var quality = qualities.items[i];
             var display = (quality.hidden) ? "none" : "inherit";
             $li = $("<li>", {
@@ -188,7 +207,7 @@ Display.prototype = {
             });
 
             // Tags
-            $tags = GetTags($li);
+            $tags = this.getTags($li);
             for (var j = 0; j<$tags.length; j++) $li.append($tags[j].clone());
 
             // For the top bar
@@ -207,17 +226,20 @@ Display.prototype = {
             // for (var j = 0; j<$tags.length; j++) $spanInfo.append($tags[j].clone());
 
             // If it matches the set quality, assign it to the info box
-            if (Number($li.attr("value")) === global_settings.quality && $li.attr("type") === global_settings.type && !qualitySet){
-                $downloadBtnInfo.append($spanInfo).append($downArrow);
+            if (Number($li.attr("value")) === global_settings.quality && $li.attr("type") === global_settings.type && !qualitySet) {
+                this.updateInfo($spanInfo);
                 qualitySet = true;
             }
+
             $options.append($li);
         }
 
         // If no quality is set
-        if (!qualitySet){
-            $downloadBtnInfo.append($firstSpanInfo).append($downArrow);
+        if (!qualitySet) {
+            this.updateInfo($firstSpanInfo);
         }
+
+        return $options;
     },
     // Updates the display
     updateDisplay: function(sizes, qualities, $li, size, forceNeutralFloat) {
@@ -258,6 +280,104 @@ Display.prototype = {
             }
         }
     },
+
+    //Returns a jquery element of the download button with a certain text
+    updateDownloadButton: function (text, disabled) {
+        // Create the download button container
+        var $container = this.checkContainer();
+
+        // Determine if it is of the disabled class
+        var disabledText = (disabled) ? " disabled" : "";
+
+        // Create the button if it doesn't exist
+        var $button = $container.find("#downloadBtn");
+        if ($button.length === 0) {
+            $button = $("<button>", {
+                id:"downloadBtn"
+            });
+            $button.append(this.$downloadIcon);
+            $button.append($("<span>", {
+                class:"midalign"
+            }));
+
+            // Append it to the container
+            $container.append($button);
+        }
+
+        // Update the properties
+        $button.find("button").attr("class", disabledText);
+        $button.find("span").html(text);
+    },
+    updateInfo: function ($span) {
+        var $downloadBtnInfo = $("#downloadBtnInfo");
+
+        // Add it if it doesn't exist
+        if ($downloadBtnInfo.length === 0) {
+            $downloadBtnInfo = $("<span>", {
+                id:"downloadBtnInfo"
+            }).append(this.$downArrow);
+
+            // Find the container
+            var $container = this.checkContainer();
+
+            // Append it to the container
+            $container.append($downloadBtnInfo);
+        }
+
+        // If an element was passed, prepend it
+        if ($span) {
+            // Remove pre-existing span element
+            $downloadBtnInfo.find("span").remove();
+
+            // Prepend the new element
+            $downloadBtnInfo.prepend($span);
+        }
+    },
+
+    // Fetch the container if it exists, otherwise make it
+    checkContainer: function() {
+        var $container = $("#downloadBtnCont");
+        if ($container.length === 0) {
+            $container = $("<span>", {
+                id:"downloadBtnCont",
+                class:"unselectable"
+            });
+
+            $("#watch7-subscription-container").append($container);
+        }
+
+        return $container;
+    },
+
+    // Readjusts the values of the option window to correctly align it
+    fixOptionsOffset: function ($options, repeat) {
+        $options = $options || $("#options");
+
+        if ($options) {
+            $options.css({
+                "left":$("#downloadBtn").offset().left,
+                "top":$("#downloadBtn").offset().top+$("#downloadBtn").height()+$("#downloadBtn").css("border-top-width").replace("px","")*2
+            });
+
+            // Call the same function again THREE more times
+            // with a 200ms INTERVAL
+            repeat = (!isNaN(repeat)) ? repeat+1 : 0;
+            if (repeat < 3) {
+                var _this = this;
+                setTimeout(function() {
+                    _this.fixOptionsOffset($options, repeat);
+                }, 200, $options, repeat);
+            }
+        } else {
+            console.log("potential error, fixOptionsOffset was given undefined");
+        }
+
+        // Prepend to the body if necessary
+        if ($("#options").length === 0 && $options) {
+            $("body").prepend($options);
+        }
+
+    },
     getTags: function($li) {
         $tags = [];
         $tags.push($("<span>", {
@@ -286,7 +406,7 @@ function Download() {
 
 }
 
-Display.prototype = {
+Download.prototype = {
     events: function() {
         // Download button click
         $(document).on("click", "#downloadBtn", function(e) {
@@ -620,16 +740,9 @@ Qualities.prototype = {
 				audio:tag.url || false
 			});
 
-			if (typeof(GM_download) !== undefined) {
-				console.log(typeof(GM_download));
-			}
-			// GM_download(url, itag+".mp4");
-
-
 			i++;
 			url = decodeURIComponent(potential.getSetting("url", i));
 		}
-		console.log(qualities);
 		potential.getSetting("url", i);
 	},
 	getLabel: function(tag) {
@@ -654,8 +767,9 @@ Qualities.prototype = {
 	    if (isNaN(b.val)) b.val = 0;
 	    return Number(b.val) - Number(a.val);
 	},
-	update: function() {
-		this.sizes.update(this);
+	getSizes: function() {
+		// Obtain the sizes for all the elements
+		// this.sizes.update(this);
 	}
 };
 
@@ -1006,22 +1120,9 @@ SetupGlobalSettings(); //Ensures that all global_settings are set... if not, ref
 // Manage the sizes
 var signature = new Signature();
 var display = new Display();
-console.log(ytplayer);
 var qualities = new Qualities();
-console.log(signature);
 //signature.fetchSignatureScript();
 
-// Sprites
-var $downloadIcon = $("<img>", {
-    style:"margin-right:4.5px",
-    class:'midalign',
-    src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA3ElEQVQ4T6WT7RHBQBCGn1RAB3RAB6hAVEA6oAI6QAdK0AE6oIOkAx0wb+bO7NxskjHZP7m53ffZj9tk9LSsp542wBgYhQQv4O0l8wBD4AhsEsEF2KUgD/AEJg2tybewEAvIgTWgb5upilMMiIArsExUD2Ae7u7ALJxLYAWomnqIB2DvpGwCxFAlLQTwepZY99sQrZKnpooIOQvwcbJr4oXzCpqRtVIA2591WojOqVixlQAa1K1h7BIqxhNLUrcg09Koz8Efq6055ekixWfr4mitf8/YFdzq7/03fgFd3CYQgbnh+gAAAABJRU5ErkJggg=="
-});
-var $downArrow = $("<img>", {
-    style:"margin-left:6px;",
-    class:'midalign',
-    src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAAV0lEQVQoU2NkIBEwkqiegXQNc+fOTWBkZJxPjE3///9PBNtAjCaQ4uTk5AVwJ+HTBFMMMhzFD9g0ISvG0IDuPHTFWDXANIFokJvRA4P0YCUmOJHVkGwDAPVTKkQsO0MlAAAAAElFTkSuQmCC"
-});
 
 /* -----------------  PART I, the local handler  ----------------------- */
 $(document).ready(function(){
@@ -1048,18 +1149,18 @@ function Program() {
 
         var exempt = ["1080p (no audio)", "480p (no audio)"];
         var reqAudioKeep = [72060, 72060000, 108060, 108060000, 1080, 1080000, 480, 480000];
-        $("#downloadBtnCont").remove();
-        $downBtn = DownloadButton("Loading...", true);
-        $("#watch7-subscription-container").append($("<span>", {id:'downloadBtnCont', class:'unselectable'}).append($downBtn));
+
+        // Set the download button to Loading... with DISABLED
+        display.updateDownloadButton("Loading...", true);
 
         // Setup MP3s
         var redirect = "http://peggo.co/dvr/"+window.location.href.getSetting("v")+"?hi";
         for (var j = 0; j<audios.length; j++){
             if (global_settings.ignoreTypes.indexOf("mp3") === -1){
-                qualities.items.pushItem({
+                qualities.items.push({
                     val:-audios[j],
                     link:redirect+"&q="+audios[j],
-                    text:audios[i].toString()+"kbps ",
+                    text:audios[j].toString()+"kbps ",
                     type:"mp3",
                     hidden:false,
                     mp3:true
@@ -1067,30 +1168,37 @@ function Program() {
             }
         }
 
-        for (var i = 0; i<qualities.items.length; i++) {
-            $downBtn = DownloadButton("Download");
+        /*
+        Download codes
 
-            $downloadBtnInfo = $("<span>", {id:"downloadBtnInfo"}).append($downArrow);
-            $options = $("<ul>", {
-                id:"options", 
-                class:"unselectable", 
-                style:"display:none;position:absolute"
-            });
-            $options = display.initDisplay(qualities, $downloadBtnInfo, $options);
-            
-            //If it already exists, don't bother
-            if ($("#downloadBtn").length > 0) return;
-
-            $("#watch7-subscription-container").append($("<span>", {id:'downloadBtnCont', class:'unselectable'}).append($downBtn).append($downloadBtnInfo));
-            $options = AdjustOptions($options); //realigns options window
-            $("body").prepend($options);
-
-            qualities.update();
-
-            // Add events to the main frame
-            AddEvents();
-
+        console.log("Trying to download:", url);
+        if (typeof(GM_download) !== undefined) {
+            console.log("No GM_download", typeof(GM_download));
+        } else {
+            GM_download(url, itag+".mp4");
         }
+
+        */
+
+        // Update the download button, set it to be ENABLED
+        // with text "Download"
+        display.updateDownloadButton("Download");
+
+        // Initialise the options
+        $options = display.initOptions(qualities, $("#downloadBtnInfo"));
+
+        //If it already exists, don't bother
+        //if ($("#downloadBtn").length > 0) return;
+
+        // Realigns options window
+        display.fixOptionsOffset($options);
+
+        // Update the qualities
+        qualities.getSizes();
+
+        // Add events to the main frame
+        AddEvents();
+
     /* ---------------  PART II, the external handler  --------------------- */
     } else if (window.location.href.indexOf("google") > -1 && window.location.href.indexOf("youtube") > -1){
         var link = window.location.href;
@@ -1169,30 +1277,29 @@ function HandleVal(val, text, type, exempt){ //Return the correct value
 }
 
 
+function AddEvents() { //Adds events to the window
+    console.log("ADDING EVENTS");
 
-
-
-function AddEvents(){ //Adds events to the window
     var $options = $("#options");
     var $downloadBtnInfo = $("#downloadBtnInfo");
 
-    //As soon as document is ready, realign options
+    // As soon as document is ready, realign options
     $(document).ready(function(){
-        if ($options.length > 0){
-            AdjustOptions($options);
-        }
+        display.fixOptionsOffset($options);
     });
 
-    //Realign options on focus/resize
-    $(window).on("blur focus", function(e){
-        AdjustOptions($options);
+    // Realign options on focus/resize
+    $(window).on("blur focus", function(e) {
+        display.fixOptionsOffset($options);
     });
-    $(window).resize(function(){
-        AdjustOptions($options);
+    $(window).resize(function() {
+        display.fixOptionsOffset($options);
     });
 
-    //Toggle options on info click
-    $downloadBtnInfo.click(function(){
+    // Toggle options on info click
+    $downloadBtnInfo.off("click");
+    $downloadBtnInfo.click(function() {
+        console.log("H");
         $options.toggle();
     });
 
@@ -1211,11 +1318,6 @@ function AddEvents(){ //Adds events to the window
         if (e.target.id === 'downloadBtnInfo' || $(e.target).parent().attr("id") === 'downloadBtnInfo') return;
         $options.hide();
     });
-}
-
-function AdjustOptions($element){ //Readjusts the values of the option window to correctly align it
-    $element.css({"left":$("#downloadBtn").offset().left, "top":$("#downloadBtn").offset().top+$("#downloadBtn").height()+$("#downloadBtn").css("border-top-width").replace("px","")*2});
-    return $element;
 }
 
 //Global settings handling
@@ -1308,17 +1410,4 @@ function KillProcesses(){
         processes.splice(i, 1);
         i--;
     }
-}
-
-//Returns a jquery element of the download button with a certain text
-function DownloadButton(text, disabled){
-    var disabledText = (disabled) ? " disabled" : "";
-    var $button =  $("<button>", {
-        id:"downloadBtn",
-        class:disabledText
-    }).append($downloadIcon).append($("<span>", {
-        class:"midalign", html:text
-    }));
-
-    return $button;
 }

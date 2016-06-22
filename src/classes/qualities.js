@@ -184,16 +184,9 @@ Qualities.prototype = {
 				audio:tag.url || false
 			});
 
-			if (typeof(GM_download) !== undefined) {
-				console.log(typeof(GM_download));
-			}
-			// GM_download(url, itag+".mp4");
-
-
 			i++;
 			url = decodeURIComponent(potential.getSetting("url", i));
 		}
-		console.log(qualities);
 		potential.getSetting("url", i);
 	},
 	getLabel: function(tag) {
@@ -218,7 +211,8 @@ Qualities.prototype = {
 	    if (isNaN(b.val)) b.val = 0;
 	    return Number(b.val) - Number(a.val);
 	},
-	update: function() {
-		this.sizes.update(this);
+	getSizes: function() {
+		// Obtain the sizes for all the elements
+		// this.sizes.update(this);
 	}
 };

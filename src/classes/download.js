@@ -5,7 +5,7 @@ function Download() {
 
 }
 
-Display.prototype = {
+Download.prototype = {
     events: function() {
         // Download button click
         $(document).on("click", "#downloadBtn", function(e) {
