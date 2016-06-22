@@ -29,6 +29,7 @@ SetupGlobalSettings(); //Ensures that all global_settings are set... if not, ref
 // Manage the sizes
 var signature = new Signature();
 var display = new Display();
+console.log(ytplayer);
 var qualities = new Qualities();
 console.log(signature);
 //signature.fetchSignatureScript();
@@ -66,34 +67,30 @@ function Program() {
             duration:false
         };
         qualities.initialise();
+        qualities.sortItems();
 
         var exempt = ["1080p (no audio)", "480p (no audio)"];
         var reqAudioKeep = [72060, 72060000, 108060, 108060000, 1080, 1080000, 480, 480000];
         $("#downloadBtnCont").remove();
         $downBtn = DownloadButton("Loading...", true);
         $("#watch7-subscription-container").append($("<span>", {id:'downloadBtnCont', class:'unselectable'}).append($downBtn));
-        YQL(window.location.href, function(xhr){
-            $("#downloadBtnCont").remove();
-            var $iframe = $(xhr);
-            var videoId = window.location.href.getSetting("v");
-            var $rows = $iframe.find("table a[href*="+videoId+"]").parent().parent().parent().parent().find("tbody tr");
-            
 
-            var redirect = "http://peggo.co/dvr/"+window.location.href.getSetting("v")+"?hi";
-            for (i = 0; i<audios.length; i++){
-                if (global_settings.ignoreTypes.indexOf("mp3") === -1){
-                    qualities.pushItem({
-                        val:-audios[i], 
-                        link:redirect+"&q="+audios[i], 
-                        text:audios[i].toString()+"kbps ", 
-                        type:"mp3", 
-                        hidden:false, 
-                        mp3:true
-                    });
-                }
+        // Setup MP3s
+        var redirect = "http://peggo.co/dvr/"+window.location.href.getSetting("v")+"?hi";
+        for (var j = 0; j<audios.length; j++){
+            if (global_settings.ignoreTypes.indexOf("mp3") === -1){
+                qualities.items.pushItem({
+                    val:-audios[j],
+                    link:redirect+"&q="+audios[j],
+                    text:audios[i].toString()+"kbps ",
+                    type:"mp3",
+                    hidden:false,
+                    mp3:true
+                });
             }
-            qualities.sortItems();
+        }
 
+        for (var i = 0; i<qualities.items.length; i++) {
             $downBtn = DownloadButton("Download");
 
             $downloadBtnInfo = $("<span>", {id:"downloadBtnInfo"}).append($downArrow);
@@ -115,7 +112,8 @@ function Program() {
 
             // Add events to the main frame
             AddEvents();
-        });
+
+        }
     /* ---------------  PART II, the external handler  --------------------- */
     } else if (window.location.href.indexOf("google") > -1 && window.location.href.indexOf("youtube") > -1){
         var link = window.location.href;

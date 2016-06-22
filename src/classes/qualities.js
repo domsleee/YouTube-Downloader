@@ -8,7 +8,7 @@ function Qualities() {
 	this.itags = {
 		5: {
 			type:"flv"
-		}
+		},
 		17: {
 			resolution:144,
 			type:"3gpp"
@@ -157,11 +157,6 @@ Qualities.prototype = {
 			}
 
 			var label = this.getLabel(tag);
-
-			//console.log("type:", url.getSetting("mime"));
-			//console.log("url:",url);
-			//console.log("itag:",itag);
-			//console.log("clen:",clen);
 
 			// If we have content-length, we can find size IMMEDIATELY
 			if (clen !== "false") {

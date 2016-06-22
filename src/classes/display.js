@@ -2,9 +2,11 @@
 // things related to the interface can be found here
 
 function Display() {
-    this.SIZE_LOADED = "red"; //The text colour of the size once loaded
-    this.SIZE_WAITING = "green"; //The text colour of the size when waiting on audio size
+    // The text colour of the size once loaded
+    this.SIZE_LOADED = "red";
 
+    // The text colour of the size when waiting on audio size
+    this.SIZE_WAITING = "green";
 }
 
 Display.prototype = {
@@ -25,7 +27,7 @@ Display.prototype = {
         }
     },
     // Initialises the display
-    initDisplay: function(qualities, $downloadBtnInfo, $options){
+    initDisplay: function(qualities, $downloadBtnInfo, $options) {
         // Fallback options
         var qualitySet = false;
         var $firstSpanInfo;
@@ -136,4 +138,4 @@ Display.prototype = {
 
         return $tags;
     }
-}
+};
