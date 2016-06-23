@@ -25,6 +25,11 @@ Download.prototype = {
         if (dash) {
             this.handleAudio(name);
         }
+
+        // Re-enable the button after 0.5 seconds
+        setTimeout(function() {
+            display.updateDownloadButton("Download");
+        }, 500);
     },
     getTitle: function(label) {
         var label = (label) ? label : "";
@@ -57,7 +62,7 @@ Download.prototype = {
     },
     saveToDisk: function(url, name) {
         console.log("Trying to download:", url);
-        if (typeof(GM_download) !== undefined) {
+        if (typeof(GM_download) === "undefined") {
             this.fallbackSave(url);
             alert("Please enable GM_Download if you have videoplayback issues");
         } else {

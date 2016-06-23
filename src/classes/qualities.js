@@ -147,6 +147,7 @@ Qualities.prototype = {
 
 		var url = decodeURIComponent(potential.getSetting("url", i));
 		while (url !== "false") {
+			url = url.split(",")[0];
 			var type = decodeURIComponent(url.getSetting("mime"));
 			var clen = decodeURIComponent(url.getSetting("clen"));
 			var itag = parseInt(url.getSetting("itag"), 10);
@@ -175,10 +176,13 @@ Qualities.prototype = {
                 var $li = $("<li>", {
                     url:url
                 });
-                this.sizes.getSize(this, $li, function($li, size) {
+                this.sizes.getSize($li, function($li, size) {
                     global_properties.audio_size = size;
                 });
             }
+
+            // Get the value from the tag
+            var val = this.getVal(tag);
 
             // Append to qualities (if it shouldn't be ignored)
             var item = {
@@ -190,7 +194,8 @@ Qualities.prototype = {
 				muted:tag.muted || false,
 				label:label,
 				text:label,
-				audio:tag.url || false
+				audio:tag.url || false,
+				val:val,
 			};
 			if (this.checkValid(item)) {
 				this.items.push(item);
@@ -215,6 +220,28 @@ Qualities.prototype = {
 		}
 
 		return label;
+	},
+	getVal: function(tag) {
+		// Base value is the resolution OR 0
+		var val = tag.resolution || 0;
+
+		// Multiply it if it's fps
+		if (tag.fps >= 30) {
+			val *= 100;
+		}
+
+		// Multiply if it's mp4
+		if (tag.type === "mp4") {
+			val *= 100;
+		}
+
+		// Make it negative if it's audio
+		if (tag.audio) {
+			val -= 5;
+			val *= -1;
+		}
+
+		return val;
 	},
 
 	sortItems: function() {

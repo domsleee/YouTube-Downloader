@@ -30,15 +30,15 @@ Display.prototype = {
 
         // Main window
         var $downloadBtnInfo = $("#downloadBtnInfo");
-        sizes.getSize(qualities, $downloadBtnInfo.find("span"), function($span, size) {
-            _this.updateDisplay(sizes, qualities, $span, size, true);
+        sizes.getSize($downloadBtnInfo.find("span:eq(0)"), function($span, size) {
+            _this.updateDisplay($span, size, true);
         });
 
         // Drop down list
         $lis = $("#options").find("li");
         for (var i = 0; i<$lis.length; i++) {
-            sizes.getSize(qualities, $lis.eq(i), function($li, size) {
-                _this.updateDisplay(sizes, qualities, $li, size);
+            sizes.getSize($lis.eq(i), function($li, size) {
+                _this.updateDisplay($li, size);
             });
         }
     },
@@ -101,7 +101,9 @@ Display.prototype = {
         }
     },
     // Updates the display
-    updateDisplay: function(sizes, qualities, $li, size, forceNeutralFloat) {
+    updateDisplay: function($li, size, forceNeutralFloat) {
+        var sizes = qualities.sizes;
+
         // Attempt to obtain the size from the qualities values
         var matchedQualities = qualities.items.listMatches("val", $li.attr("value"));
         if (matchedQualities.length > 0) {
@@ -109,17 +111,22 @@ Display.prototype = {
         }
 
         var _this = this;
-        var color = ($li.attr("requiresAudio") === "true") ? this.SIZE_WAITING : this.SIZE_LOADED;
+        var color = ($li.attr("dash") === "true") ? this.SIZE_WAITING : this.SIZE_LOADED;
 
         // If the SIZE tag doesn't already exist, add it
         var extraClass = (forceNeutralFloat) ? " floatNormal" : "";
-        if ($li.find("span.size").length === 0) {
-            $li.append($("<span>", {
-                html:sizes.formatSize(size),
+        $spanSize = $li.find("span.size");
+
+        // Add it if it doesn't exist
+        if ($spanSize.length === 0) {
+            $spanSize = $("<span>", {
                 style:"color:"+color,
                 class:"size ignoreMouse"+extraClass
-            }));
+            });
+            $li.append($spanSize);
         }
+
+        $spanSize.html(sizes.formatSize(size));
 
         // If it is of the DASH format
         if ($li.attr("dash") === "true") {
@@ -134,7 +141,7 @@ Display.prototype = {
             } else {
                 // Try again in 2 seconds
                 setTimeout(function() {
-                    _this.updateDisplay(sizes, qualities, $li, size);
+                    _this.updateDisplay($li, size);
                 }, 2000);
             }
         }
@@ -164,7 +171,7 @@ Display.prototype = {
         }
 
         // Update the properties
-        $button.find("button").attr("class", disabledText);
+        $button.attr("class", disabledText);
         $button.find("span").html(text);
     },
 
@@ -187,22 +194,35 @@ Display.prototype = {
 
         // If an element was passed, prepend it
         if ($li) {
-            var $span = $("<span>", {
-                html:$li.attr("label"),
-                label:$li.attr("label"),
-                url:$li.attr("url"),
-                type:$li.attr("type"),
-                dash:$li.attr("dash"),
-                muted:$li.attr("muted"),
-                mp3:$li.attr("mp3"),
-                value:$li.attr("val")
+            $span = $downloadBtnInfo.find("span:eq(0)");
+            if ($span.length === 0) {
+                $span = $("<span>");
+
+                // Prepend the new element
+                $downloadBtnInfo.prepend($span);
+            }
+
+            // Set the span ATTRIBUTES
+            $span.attr({
+                "label":$li.attr("label"),
+                "url"  :$li.attr("url"),
+                "type" :$li.attr("type"),
+                "dash" :$li.attr("dash"),
+                "muted":$li.attr("muted"),
+                "mp3"  :$li.attr("mp3"),
+                "value":$li.attr("value")
             });
 
-            // Remove pre-existing span element
-            $downloadBtnInfo.find("span").remove();
+            var $child = $span.find("span.text");
+            if ($child.length === 0) {
+                $child = $("<span>", {
+                    class:"text"
+                });
+                $span.append($child);
+            }
 
-            // Prepend the new element
-            $downloadBtnInfo.prepend($span);
+            // Set the span HTML
+            $child.html($span.attr("label"));
         }
     },
 

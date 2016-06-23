@@ -8,7 +8,7 @@ function GetSizes() {
 }
 
 GetSizes.prototype = {
-    getSize: function(qualities, $li, callback) {
+    getSize: function($li, callback) {
         var url = $li.attr("url");
 
         // Attempt to obtain the size from the qualities values
@@ -16,11 +16,6 @@ GetSizes.prototype = {
         var size = (matchedQualities.length > 0) ? matchedQualities[0].size : false;
 
         if (size) {
-            callback($li, size);
-        } else if ($li.attr("type") === "mp3") {
-            var kbps = Math.abs($li.attr("value"));
-            var bytes_per_second = kbps / 8 * 1000;
-            size = bytes_per_second * global_properties.duration;
             callback($li, size);
         } else {
             // We must make a cross-domain request to determine the size from the return headers...
