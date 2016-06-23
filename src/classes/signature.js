@@ -8,7 +8,10 @@ function Signature() {
 
 Signature.prototype = {
     fetchSignatureScript: function(callback) {
-        if (global_settings.signature_decrypt) callback();
+        if (global_settings.signature_decrypt) {
+            callback();
+            return;
+        }
 
         var _this = this;
         var scriptURL = this.getScriptURL(ytplayer.config.assets.js);

@@ -124,7 +124,13 @@ function Qualities() {
 		302: {
 			resolution:720,
 			fps:60,
-			type:"mp4",
+			type:"webm",
+			muted:true
+		},
+		303: {
+			resolution:1080,
+			fps:60,
+			type:"webm",
 			muted:true
 		}
 	}
@@ -187,7 +193,7 @@ Qualities.prototype = {
 				audio:tag.url || false
 			};
 			if (this.checkValid(item)) {
-				qualities.items.push(item);
+				this.items.push(item);
 			}
 
 			// Move on to the next item
@@ -213,7 +219,7 @@ Qualities.prototype = {
 
 	sortItems: function() {
 		var _this = this;
-		qualities.items.sort(_this.sortDescending);
+		this.items.sort(_this.sortDescending);
 	},
 	sortDescending: function(a, b) {
 	    if (isNaN(a.val)) a.val = 0;

@@ -24,21 +24,21 @@ var global_properties = {
     duration:false
 };
 
-SetupGlobalSettings(); //Ensures that all global_settings are set... if not, refer to default_settings
+// Ensures that all global_settings are set... if not, refer to default_settings
+SetupGlobalSettings();
 
-// Manage the sizes
+// Objects
 var signature = new Signature();
 var display = new Display();
 var qualities = new Qualities();
 //signature.fetchSignatureScript();
-
 
 /* -----------------  PART I, the local handler  ----------------------- */
 $(document).ready(function(){
     signature.fetchSignatureScript(Program);
 });
 
-// This function is run on every new page load.... should be used to reset global variables
+// This function is run on every new page load....
 function Program() {
     //console.log(ytplayer.config.assets.js);
     //console.log(ytplayer.config.args.adaptive_fmts);
@@ -48,6 +48,7 @@ function Program() {
 
     KillProcesses();
     if (window.location.href.indexOf("watch") > -1) {
+        console.log(window.location.href);
         // Reset global properties
         global_properties = {
             audio_size:false,
@@ -107,73 +108,7 @@ function Program() {
 
         // Add events to the main frame
         AddEvents();
-
-    /* ---------------  PART II, the external handler  --------------------- */
-    } else if (window.location.href.indexOf("google") > -1 && window.location.href.indexOf("youtube") > -1){
-        var link = window.location.href;
-        if (link.split('#').length > 1 && link.split("youtube").length > 1){
-            var settings = JSON.parse(link.split("#")[1].replace(/\%22/g,'"').replace(/%0D/g, "")); //settings is an object including title, remain, link, host, downloadTo
-            $('body').remove(); //Stop video
-            settings.title = decodeURIComponent(settings.title);
-            link = link.split("#")[0]+"&title="+encodeURIComponent(settings.title);
-            SaveToDisk(link, settings); //Save
-            $(window).ready(function(){
-                window.parent.postMessage({origin:settings.host, id:settings.id.toString()}, settings.host);
-            });
-        }
-    /* -----------------  PART III, MP3 Handler  ----------------------- */
-    } else if (window.location.href.indexOf("peggo") > -1) {
-        $(document).ready(function(){
-            var lightbox = new Lightbox("Notice", $("<div>", {
-                style:'margin-bottom:1em', 
-                html:"This is a (hopefully) temporary solution. The problem is that YouTube uses the HTTPS protocol, whereas this site uses HTTP. As such, Javascript CANNOT embed this site in YouTube, hence leaving the only solution: To open the site in a new window</p><p>Anyway, this will close in 10 seconds</p>"
-            }));
-            lightbox.enable();
-            new timeout({range:[0, MP3_WAIT+1], time:1, callback:function(i){ //execute a for loop for range, execute every certain amount of seconds
-                var lightbox = new Lightbox("Notice", $("<div>", {html:(MP3_WAIT-i)+"..."}));
-                $("title").text(MP3_WAIT-i+" seconds remaining");
-                if (i === MP3_WAIT) self.close();
-            }});
-            $(window.top).find("#audio-bitrate-select").val(window.location.href.split("&q=")[1]);
-            setTimeout(function(){
-                $("#record-audio-button")[0].click();
-            }, 3*1000);
-        });
     }
-}
-
-/* ----------------- PART IV, iframe Handler ---------------------- */
-if (window.location.href.indexOf("youtube") !== -1){
-    var eventMethod = window.addEventListener ? "addEventListener" : "attachEvent";
-    var eventer = window[eventMethod];
-    var messageEvent = (eventMethod === "attachEvent") ? "onmessage" : "message";
-
-    // Listen to message from child IFrame window
-    $(window).on(messageEvent, function(e){
-        var e = e.originalEvent;
-        var id = (e.data) ? e.data.id : "nothing";
-        if (e.origin){
-            if (e.origin.split('docs.google').length > 1 || e.origin.split("googlevideo").length > 1){
-                remain--;
-                $("#"+e.data.id.toString()).remove();
-                if (remain === 0) $("#downloadBtn").onState(), idCount = 0;    
-            }
-        }
-    }); 
-
-    /* -------------- PART V, Window change Handler ------------------- */
-    var lastHref = window.location.href;
-    var lastVid = '';
-    setInterval(function(){
-        if (lastHref !== window.location.href){
-            if (window.location.href.split("?v=").length === 1) return;
-            var newVid = window.location.href.split("?v=")[1].split("&")[0];
-            if (lastVid === newVid) return;
-            lastVid = newVid;
-            setTimeout(function(){ Program();}, 1500);
-            lastHref = window.location.href;
-        }
-    }, 100);
 }
 
 function HandleVal(val, text, type, exempt){ //Return the correct value
@@ -250,74 +185,6 @@ function SetupGlobalSettings(){
 
 function UpdateGlobalSettings(){
     localStorage.setObject('global_settings', global_settings);
-}
-
-function timeout(params){
-    this.params = params || {};
-    for (var key in this.params){
-        if (this.params.hasOwnProperty(key)){
-            this[key] = this.params[key];
-        }
-    }
-    this.loop = function(){
-        this.callback(this.range[0]);
-        var _this = this;
-        setTimeout(function(){
-            _this.range[0]++;
-            if (_this.range[0]<_this.range[1]){
-                _this.loop();
-            }
-        }, this.time*1000);
-    };
-    this.loop();
-}
-
-function Lightbox(id, $container, params){
-    var params = params || {};
-    var count = (params.count) ? "_"+params.count.toString() : "";
-    var _this = this;
-    this.enable = function(){
-        $("#"+id+count+"_box").show();
-        $("#"+id+count+"_content").show();
-    };
-    this.disable = function(){
-        $("#"+id+count+"_box").hide();
-        $("#"+id+count+"_content").hide();
-    };
-
-    var $content = $("<div>").append("<h1 class='coolfont' style='font-size:1.5em;padding:0.5em;text-align:center'>"+id+"</h1>");
-    $content.append($container);
-    LockScroll($container);
-
-    this.closeHandle = function(e){
-        e.data._this.disable();
-    };
-
-    var $box = $("<div>", {
-        style:"display:none;width:100%;height:150%;top:-25%;position:fixed;background-color:black;opacity:0.8;z-index:99",
-        id:id+count+'_box'
-    }).click({_this:_this, params:params}, this.closeHandle);
-
-    $content.css("margin", "0.5em 1em").addClass("unselectable");
-    var $wrap = $("<div>", {
-        id:id+count+"_content",
-        style:"color:black;display:none;background-color:white;position:fixed;width:400px;height:300px;margin:auto;left:0;right:0;top:30%;border:1px solid #999999;z-index:100"
-    }).append($content);
-
-    if ($("#"+id+"_content").length === 0) {
-        $("body").append($box).append($wrap);
-    } else {
-        $("#"+id+"_content div").html($("#"+id+"_content div").html()+$container.html());
-    }
-}
-
-function LockScroll($element){
-    $element.bind("mousewheel DOMMouseScroll", function(e){
-        var up = (e.originalEvent.wheelDelta > 0 || e.originalEvent.detail < 0);
-        if ((Math.abs(this.scrollTop - (this.scrollHeight - $(this).height())) < 2 && !up) || (this.scrollTop === 0 && up)){
-            e.preventDefault();
-        }
-    });
 }
 
 function KillProcesses(){
