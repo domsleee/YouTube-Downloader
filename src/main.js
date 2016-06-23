@@ -36,6 +36,7 @@ function Program() {
     // If the old thing is still there, wait a while
     if ($("#downloadBtn").length > 0 || !ytplayer) {
         setTimeout(Program, 2000);
+        return;
     }
 
     // Get the signature (required for decrypting)
