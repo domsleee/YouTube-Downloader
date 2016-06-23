@@ -1207,7 +1207,8 @@ function Program() {
     if (url.indexOf("watch") === -1) return;
 
     // If the old thing is still there, wait a while
-    if ($("#downloadBtn").length > 0 || !ytplayer) {
+    ytplayer = ytplayer || {};
+    if ($("#downloadBtn").length > 0 || !ytplayer.config) {
         setTimeout(Program, 2000);
         return;
     }
@@ -1231,15 +1232,6 @@ function Program() {
         // Update the display (fetch sizes as well)
         display.update();
     });
-}
-
-function HandleVal(val, text, type, exempt){ //Return the correct value
-    if (text.split("p60").length > 1) val += 60;
-    if (type === 'mp4') val *= 1000;
-    for (i = 0; i<exempt.length; i++) if (text.indexOf(exempt[i]) !== -1) return val;
-    if (text.split("no audio").length > 1) val /= 10000;
-    if (isNaN(val)) val = -1;
-    return val;
 }
 
 // Adds events to the window
