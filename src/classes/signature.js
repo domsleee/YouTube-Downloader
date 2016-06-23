@@ -1,5 +1,5 @@
 // Gets the signature code from YouTube in order
-// to be able to correctly decrypt direct links
+// to be able to correctly decrypt direct urls
 // USES: ytplayer.config.assets.js
 
 function Signature() {

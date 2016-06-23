@@ -145,7 +145,6 @@ Qualities.prototype = {
 		var potential = ytplayer.config.args.adaptive_fmts + ytplayer.config.args.url_encoded_fmt_stream_map
 		var i = 1;
 
-		//console.log(potential);
 		var url = decodeURIComponent(potential.getSetting("url", i));
 		while (url !== "false") {
 			var type = decodeURIComponent(url.getSetting("mime"));
@@ -156,7 +155,7 @@ Qualities.prototype = {
 			// Get data from the ITAG identifier
 			var tag = this.itags[itag] || {};
 
-			var newType = type.split("/")[1];
+			var newType = type.split("/")[1].split(",")[0];
 			if (newType !== tag.type) {
 				console.log("Error with "+itag+", "+newType+"!="+tag.type);
 				console.log(decodeURIComponent(url));
@@ -170,12 +169,13 @@ Qualities.prototype = {
 				size = this.sizes.formatSize(clen);
 			}
 
-			// If it is the audio link - find the size and update
-			if (type === "mp4" && tag.audio){
+			// If it is the audio url - find the size and update
+			if (newType === "mp4" && tag.audio) {
+                tag.type = "m4a";
                 var $li = $("<li>", {
-                    link:link
+                    url:url
                 });
-                this.sizes.getSize(this, $li, function($li, size){
+                this.sizes.getSize(this, $li, function($li, size) {
                     global_properties.audio_size = size;
                 });
             }
@@ -183,9 +183,9 @@ Qualities.prototype = {
             // Append to qualities (if it shouldn't be ignored)
             var item = {
 				itag:itag,
-				link:url,
+				url:url,
 				size:size,
-				type:newType,
+				type:tag.type,
 				dash:tag.dash || false,
 				muted:tag.muted || false,
 				label:label,

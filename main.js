@@ -199,7 +199,7 @@ Display.prototype = {
             $li = $("<li>", {
                 html:quality.text,
                 value:quality.val,
-                link:quality.link,
+                url:quality.url,
                 type:quality.type,
                 label:quality.label,
                 style:"display:"+display,
@@ -232,7 +232,10 @@ Display.prototype = {
         // Update the top panel with the top element
         this.updateInfo($topEl);
 
-        return $options;
+        // Prepend options if necessary
+        if ($("#options").length === 0 && $options) {
+            $("#downloadBtnCont").append($options);
+        }
     },
     // Updates the display
     updateDisplay: function(sizes, qualities, $li, size, forceNeutralFloat) {
@@ -261,14 +264,14 @@ Display.prototype = {
                 // Let the size be the sum of the size and the audio size
                 size = parseInt(size) + parseInt(global_properties.audio_size);
 
-                $li.find("span.size").html(FormatSize(size));
+                $li.find("span.size").html(qualities.sizes.formatSize(size));
                 $li.find("span.size").css("color", this.SIZE_LOADED);
                 $li.attr("size", size);
 
             } else {
                 // Try again in 2 seconds
                 setTimeout(function() {
-                    _this.updateDisplay(qualities, $li, size);
+                    _this.updateDisplay(sizes, qualities, $li, size);
                 }, 2000);
             }
         }
@@ -324,7 +327,7 @@ Display.prototype = {
             var $span = $("<span>", {
                 html:$li.attr("label"),
                 label:$li.attr("label"),
-                link:$li.attr("link"),
+                url:$li.attr("url"),
                 type:$li.attr("type"),
                 dash:$li.attr("dash"),
                 muted:$li.attr("muted"),
@@ -353,36 +356,6 @@ Display.prototype = {
         }
 
         return $container;
-    },
-
-    // Readjusts the values of the option window to correctly align it
-    fixOptionsOffset: function ($options, repeat) {
-        $options = $options || $("#options");
-
-        if ($options) {
-            $options.css({
-                "left":$("#downloadBtn").offset().left,
-                "top":$("#downloadBtn").offset().top+$("#downloadBtn").height()+$("#downloadBtn").css("border-top-width").replace("px","")*2
-            });
-
-            // Call the same function again THREE more times
-            // with a 200ms INTERVAL
-            repeat = (!isNaN(repeat)) ? repeat+1 : 0;
-            if (repeat < 3) {
-                var _this = this;
-                setTimeout(function() {
-                    _this.fixOptionsOffset($options, repeat);
-                }, 200, $options, repeat);
-            }
-        } else {
-            console.log("potential error, fixOptionsOffset was given undefined");
-        }
-
-        // Prepend to the body if necessary
-        if ($("#options").length === 0 && $options) {
-            $("body").prepend($options);
-        }
-
     },
     getTags: function($li) {
         $tags = [];
@@ -421,84 +394,41 @@ function Download() {
 }
 
 Download.prototype = {
-    events: function() {
-        // Download button click
-        $(document).on("click", "#downloadBtn", function(e) {
-            // Only continue if it isn't disabled
-            if (!$(this).hasClass("disabled")) {
-                $(this).toggleState();
-                var $span = $("#downloadBtnInfo span");
-                var link     = $span.attr("link");
-                var type     = $span.attr("type");
-                var reqAudio = $span.attr("requiresAudio");
-                var label    = $span.attr("label");
-                var mp3      = $span.attr("mp3");
-
-                this.getVid(link, type, reqAudio, label, mp3);
-            }
-        });
-    },
-    getVid: function(link, type, requiresAudio, label, mp3){ //Force the download to be started from an iframe
-        if (type === 'mp4' && requiresAudio) type = 'm4v';
-        var host = GetHost();
-        var title = GetTitle(label);
-        var settings = {
-            "title":encodeURIComponent(title),
-            "host":host,
-            "type":type,
-            "id":idCount,
-            "label":label
-        };
-        link = link.getSetting("title");
-
-        var $iframe = $("<iframe>", { //Send video to other script to be downloaded.
-            src: link+"#"+JSON.stringify(settings),
-            style: "width:0;height:0",
-            id: idCount
-        });
-
-        if (mp3) {
-            window.open(link, "Closing in 10 seconds");
-            setTimeout(function(){ $("#downloadBtn").onState()}, 1500);
-        } else {
-            $("body").append($iframe);
-            idCount++;
-            remain ++;
+    // Download the file
+    getVid: function($span) {
+        var type = $span.attr("type");
+        var dash = ($span.attr("dash") === "true") ? true : false;
+        if (type === "mp4" && dash) {
+            type = "m4v";
         }
 
-        Interval.prototype.iframeCheck = function(){ //this.id should refer to the id of the iframe (iframeId)
-            var exist = ($("#"+this.id).length > 0);
-            (exist) ? $('#'+this.id).attr("src", $('#'+this.id).attr("src")) : this.kill()
-            this.exec += 1;
-            if (exist) $("#downloadBtn").html(DownloadButton("Download ("+(this.exec+1)+")").html());
-            console.log("Checking iframe "+this.id+" for the "+this.exec+" time");
-            if (this.exec > 4){
-                console.log("HEUSTON, we have a problem");
-            }
-        };
-        Interval.prototype.makeIframeInterval = function(){
-            var _this = this;
-            this.interval = setInterval(function(){ _this.iframeCheck()}, IFRAME_WAIT*1000);
-        };
+        var title = this.getTitle($span.attr("label"));
+        var name = title;
+        var url = $span.attr("url").setSetting("title", encodeURIComponent(title));
 
-        new Interval({id:idCount-1, title:title, make:"makeIframeInterval"});
-        if (requiresAudio === 'true') this.handleAudio(settings, type);
-    },
-    getHost: function() {
-        split = ".com";
-        return window.location.href.split(split)[0]+split;
+        // Save to disk
+        this.saveToDisk(url, name+"."+type);
+
+        // If it requires audio, download it
+        if (dash) {
+            this.handleAudio(name);
+        }
     },
     getTitle: function(label) {
         var label = (label) ? label : "";
-        var str = $("title").html().split(" - YouTube")[0].replace(/"/g, "").replace(/'/g, '').replace(/\?/g, '').replace(/:/g, '').replace(/\*/g, '-').replace(/%/g, '');
+        var str = $("title").html().split(" - YouTube")[0].replace(/"|'|\?|:|\%/g, "").replace(/\*/g, '-');
         if (global_settings.label) str = str+" "+label.toString();
         return str;
     },
 
     // Download audio if required
-    handleAudio: function(settings, type) {
-        GetVid($("#options").find("li:contains('m4a')").attr("link"), "m4a", false, settings.label);
-        settings.title = decodeURIComponent(settings.title);
+    handleAudio: function(url, name) {
+        // Download the audio file
+        this.getVid($("#options").find("li[type=m4a]"));
+
+        // Download the script
+
+        /*
         var os = GetOs();
         var text = MakeScript(settings.title, type, "m4a", "mp4", os);
         settings.type = os.scriptType;
@@ -506,18 +436,28 @@ Download.prototype = {
             SaveToDisk(URL.createObjectURL(text), settings);
         } else {
             SaveToDisk("https://github.com/Domination9987/YouTube-Downloader/raw/master/muxer/Muxer.zip", settings);
-        }
+        }*/
     },
     getOs: function() {
         var os = (navigator.appVersion.indexOf("Win") !== -1) ? "win" : "mac";
         var scriptType = (os === "win") ? "bat" : "command";
         return {os:os, scriptType:scriptType};
     },
-    saveToDisk: function(link, settings) {
+    saveToDisk: function(url, name) {
+        console.log("Trying to download:", url);
+        if (typeof(GM_download) !== undefined) {
+            this.fallbackSave(url);
+            alert("Please enable GM_Download if you have videoplayback issues");
+        } else {
+            GM_download(url, name);
+        }
+    },
+    fallbackSave: function(url) {
         var save = document.createElement('a');
-        save.href = link;
-        save.target = '_blank';
-        save.download = settings.title+"."+settings.type || 'unknown';
+        save.target = "_blank";
+        save.download = true;
+        console.log(decodeURIComponent(url));
+        save.href = url;
         (document.body || document.documentElement).appendChild(save);
         save.onclick = function() {
             (document.body || document.documentElement).removeChild(save);
@@ -525,46 +465,6 @@ Download.prototype = {
         save.click();
     }
 }
-
-// src/classes/interval.js
-// =================================================
-// This class describes an object that handles the functions
-// that are being called repeatedly in the execution of the
-// script
-function Interval(params) {
-    this.params = params || {};
-    this.exec = 0;
-    for (var key in this.params){
-        if (this.params.hasOwnProperty(key)){
-            this[key] = this.params[key];
-        }
-    }
-
-    // If processes exists, add it
-    if (processes) {
-        processes.push(this);
-    }
-
-    // Run the make function if it exists
-    if (this.make) {
-        this[this.make]();
-    }
-}
-
-Interval.prototype = {
-    kill: function(remove) {
-        var $div = $("#"+this.id);
-        if ($div.length > 0) {
-            $div.remove();
-        }
-        clearInterval(this.interval);
-        this.active = false;
-    },
-    resume: function() {
-        this.exec = 0;
-        this[this.make]();
-    }
-};
 
 // src/classes/qualities.js
 // =================================================
@@ -715,7 +615,6 @@ Qualities.prototype = {
 		var potential = ytplayer.config.args.adaptive_fmts + ytplayer.config.args.url_encoded_fmt_stream_map
 		var i = 1;
 
-		//console.log(potential);
 		var url = decodeURIComponent(potential.getSetting("url", i));
 		while (url !== "false") {
 			var type = decodeURIComponent(url.getSetting("mime"));
@@ -726,7 +625,7 @@ Qualities.prototype = {
 			// Get data from the ITAG identifier
 			var tag = this.itags[itag] || {};
 
-			var newType = type.split("/")[1];
+			var newType = type.split("/")[1].split(",")[0];
 			if (newType !== tag.type) {
 				console.log("Error with "+itag+", "+newType+"!="+tag.type);
 				console.log(decodeURIComponent(url));
@@ -740,12 +639,13 @@ Qualities.prototype = {
 				size = this.sizes.formatSize(clen);
 			}
 
-			// If it is the audio link - find the size and update
-			if (type === "mp4" && tag.audio){
+			// If it is the audio url - find the size and update
+			if (newType === "mp4" && tag.audio) {
+                tag.type = "m4a";
                 var $li = $("<li>", {
-                    link:link
+                    url:url
                 });
-                this.sizes.getSize(this, $li, function($li, size){
+                this.sizes.getSize(this, $li, function($li, size) {
                     global_properties.audio_size = size;
                 });
             }
@@ -753,9 +653,9 @@ Qualities.prototype = {
             // Append to qualities (if it shouldn't be ignored)
             var item = {
 				itag:itag,
-				link:url,
+				url:url,
 				size:size,
-				type:newType,
+				type:tag.type,
 				dash:tag.dash || false,
 				muted:tag.muted || false,
 				label:label,
@@ -817,17 +717,18 @@ Qualities.prototype = {
 
 // src/classes/qualities/getSizes.js
 // =================================================
-// Obtains the sizes of each of the links, adding
+// Obtains the sizes of each of the urls, adding
 // the "size" attribute to each li element, and setting
 // the size in kb/mb/gb etc on each element
 
 function GetSizes() {
+    this.SIZE_DP = 1;
     // No inherit properties
 }
 
 GetSizes.prototype = {
     getSize: function(qualities, $li, callback) {
-        var link = $li.attr("link");
+        var url = $li.attr("url");
 
         // Attempt to obtain the size from the qualities values
         var matchedQualities = qualities.items.listMatches("val", $li.attr("value"));
@@ -844,7 +745,7 @@ GetSizes.prototype = {
             // We must make a cross-domain request to determine the size from the return headers...
             GM_xmlhttpRequest({
                 method:"HEAD",
-                url:link,
+                url:url,
                 onload:function(xhr) {
                     if (xhr.readyState === 4 && xhr.status === 200) { //If it's okay
                         size = 0;
@@ -879,7 +780,7 @@ GetSizes.prototype = {
             if (sizes.hasOwnProperty(sizeFormat)) {
                 var minSize = sizes[sizeFormat];
                 if (size > minSize) {
-                    returnSize = (size/minSize).toFixed(SIZE_DP) + sizeFormat;
+                    returnSize = (size/minSize).toFixed(this.SIZE_DP) + sizeFormat;
                     break;
                 }
             }
@@ -893,7 +794,7 @@ GetSizes.prototype = {
 // src/classes/signature.js
 // =================================================
 // Gets the signature code from YouTube in order
-// to be able to correctly decrypt direct links
+// to be able to correctly decrypt direct urls
 // USES: ytplayer.config.assets.js
 
 function Signature() {
@@ -1117,13 +1018,15 @@ Signature.prototype = {
         "#downloadBtn:hover{ background-color:darkgreen;}",
         "#downloadBtnInfo{ cursor:default;height:22px;line-height:24px;padding:0 6px;color:#737373;font-size:11px;text-align:center;display:inline-block;margin-left:-2px;border:1px solid #ccc;background-color:#fafafa;vertical-align:middle;border-radius:0 2px 2px 0}",
         "#downIcon{ position:relative;display:inline-block;border-width:5px;border-style:solid;border-color:rgb(134, 130, 130) transparent transparent;margin-left:0 6px}",
-        "ul#options{ background-color:white;z-index:500;width:200px;padding:0 5px;cursor:default;box-shadow:0 1px 2px rgba(0,0,0,0.5)}",
+        "ul#options{ position:absolute;background-color:white;z-index:500;width:200px;padding:0 5px;cursor:default;box-shadow:0 1px 2px rgba(0,0,0,0.5)}",
         "ul#options li{ line-height:2em; padding: 0 5px; margin:0 -5px;}",
         "ul#options li:hover{ background-color:orange;}",
         "span.size{ float:right}",
         "span.tag{ margin:0.2em; padding:0.2em; background-color:lightblue; color:grey;}",
         ".floatNormal{ float:inherit!important}",
-        ".ignoreMouse{ pointer-events:none;}"
+        ".ignoreMouse{ pointer-events:none;}",
+        "#watch7-user-header{ overflow:visible!important;}",
+        "#watch7-content{ overflow:visible!important; z-index:500!important;}"
     ];
 
     // Append the CSS to the document
@@ -1134,15 +1037,7 @@ Signature.prototype = {
 
 // src/main.js
 // =================================================
-//Constants
-var IFRAME_WAIT = 20; //Amount of time to wait for iframe requests (to download)
-var YQL_WAIT = 20; //Amount of time to wait for YQL (savedeo) requests
-var SIZE_DP = 1; //Amount of decimal places for size
-var MP3_WAIT = 10; //Amount of time to wait for mp3 to download
-
 //Variables
-var remain = 0; //How many requests are remaining...
-var idCount = 0; //A counter to ensure unique IDs on iframes
 var qualities = []; //Quality options
 var global_settings = localStorage.getObject('global_settings') || {};
 var default_setings = {           //Default settings
@@ -1167,24 +1062,29 @@ SetupGlobalSettings();
 var signature = new Signature();
 var display = new Display();
 var qualities = new Qualities();
+var download = new Download();
 //signature.fetchSignatureScript();
 
 /* -----------------  PART I, the local handler  ----------------------- */
 $(document).ready(function(){
-    signature.fetchSignatureScript(Program);
+    // Add events to the main frame
+    if (window.top === window) {
+        AddEvents();
+
+        Program();
+    }
 });
 
 // This function is run on every new page load....
 function Program() {
-    //console.log(ytplayer.config.assets.js);
-    //console.log(ytplayer.config.args.adaptive_fmts);
-    //console.log(ytplayer.config.args.dashmpd);
-    //console.log(ytplayer.config.args.url_encoded_fmt_stream_map);
+    // Make sure it is of the correct URL
+    var url = window.location.href;
+    if (url.indexOf("watch") === -1) return;
 
+    // Get the signature (required for decrypting)
+    signature.fetchSignatureScript(function() {
 
-    KillProcesses();
-    if (window.location.href.indexOf("watch") > -1) {
-        console.log(window.location.href);
+        KillProcesses();
         // Reset global properties
         global_properties = {
             audio_size:false,
@@ -1205,7 +1105,7 @@ function Program() {
             if (global_settings.ignoreTypes.indexOf("mp3") === -1){
                 qualities.items.push({
                     val:-audios[j],
-                    link:redirect+"&q="+audios[j],
+                    url:redirect+"&q="+audios[j],
                     text:audios[j].toString()+"kbps ",
                     type:"mp3",
                     hidden:false,
@@ -1217,34 +1117,22 @@ function Program() {
         /*
         Download codes
 
-        console.log("Trying to download:", url);
-        if (typeof(GM_download) !== undefined) {
-            console.log("No GM_download", typeof(GM_download));
-        } else {
-            GM_download(url, itag+".mp4");
-        }
-
         */
 
         // Update the download button, set it to be ENABLED
         // with text "Download"
         display.updateDownloadButton("Download");
 
-        // Initialise the options
-        $options = display.initOptions(qualities, $("#downloadBtnInfo"));
+        // Initialise the options & add it to the frame
+        display.initOptions(qualities, $("#downloadBtnInfo"));
 
         //If it already exists, don't bother
         //if ($("#downloadBtn").length > 0) return;
 
-        // Realigns options window
-        display.fixOptionsOffset($options);
-
         // Update the display (fetch sizes as well)
         display.update();
 
-        // Add events to the main frame
-        AddEvents();
-    }
+    });
 }
 
 function HandleVal(val, text, type, exempt){ //Return the correct value
@@ -1256,37 +1144,38 @@ function HandleVal(val, text, type, exempt){ //Return the correct value
     return val;
 }
 
+// Adds events to the window
+function AddEvents() {
+    var _this = this;
 
-function AddEvents() { //Adds events to the window
-    console.log("ADDING EVENTS");
+    // Call the function on page change
+    this.lastURL = window.location.href;
+    setInterval(function() {
+        var newURL = window.location.href;
+        if (newURL !== _this.lastURL) {
+            this.lastURL = newURL;
+            Program();
+        }
+    }, 200);
 
-    var $options = $("#options");
-    var $downloadBtnInfo = $("#downloadBtnInfo");
-
-    // As soon as document is ready, realign options
-    $(document).ready(function(){
-        display.fixOptionsOffset($options);
-    });
-
-    // Realign options on focus/resize
-    $(window).on("blur focus", function(e) {
-        display.fixOptionsOffset($options);
-    });
-    $(window).resize(function() {
-        display.fixOptionsOffset($options);
+    $(document).on("click", "#downloadBtn", function() {
+        // Ensure that the button is ENABLED
+        if (!$(this).hasClass("disabled")) {
+            var $span = $("#downloadBtnInfo span");
+            $(this).toggleState();
+            download.getVid($span);
+        }
     });
 
     // Toggle options on info click
-    $downloadBtnInfo.off("click");
-    $downloadBtnInfo.click(function() {
-        console.log("H");
-        $options.toggle();
+    $(document).on("click", "#downloadBtnInfo", function() {
+        $("#options").toggle();
     });
 
     //Show options on options click
     $(document).on("click", "#options li", function() {
         // Close the options
-        $options.toggle();
+        $("#options").toggle();
 
         // Update the relevant settings
         global_settings.quality = Number($(this).attr("value"));
@@ -1300,10 +1189,15 @@ function AddEvents() { //Adds events to the window
         display.update();
     });
 
-    //Hide options on document click
-    $(document).click(function(e){
-        if (e.target.id === 'downloadBtnInfo' || $(e.target).parent().attr("id") === 'downloadBtnInfo') return;
-        $options.hide();
+    // Hide options on document click
+    $(document).click(function(e) {
+        // If it matches the info or is a child of the top info, ignore
+        if (e.target.id === "downloadBtnInfo" || $(e.target).parent().attr("id") === "downloadBtnInfo") {
+            return;
+        }
+
+        // Hide the options
+        $("#options").hide();
     });
 }
 

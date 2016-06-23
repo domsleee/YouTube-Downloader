@@ -62,7 +62,7 @@ Display.prototype = {
             $li = $("<li>", {
                 html:quality.text,
                 value:quality.val,
-                link:quality.link,
+                url:quality.url,
                 type:quality.type,
                 label:quality.label,
                 style:"display:"+display,
@@ -95,7 +95,10 @@ Display.prototype = {
         // Update the top panel with the top element
         this.updateInfo($topEl);
 
-        return $options;
+        // Prepend options if necessary
+        if ($("#options").length === 0 && $options) {
+            $("#downloadBtnCont").append($options);
+        }
     },
     // Updates the display
     updateDisplay: function(sizes, qualities, $li, size, forceNeutralFloat) {
@@ -124,14 +127,14 @@ Display.prototype = {
                 // Let the size be the sum of the size and the audio size
                 size = parseInt(size) + parseInt(global_properties.audio_size);
 
-                $li.find("span.size").html(FormatSize(size));
+                $li.find("span.size").html(qualities.sizes.formatSize(size));
                 $li.find("span.size").css("color", this.SIZE_LOADED);
                 $li.attr("size", size);
 
             } else {
                 // Try again in 2 seconds
                 setTimeout(function() {
-                    _this.updateDisplay(qualities, $li, size);
+                    _this.updateDisplay(sizes, qualities, $li, size);
                 }, 2000);
             }
         }
@@ -187,7 +190,7 @@ Display.prototype = {
             var $span = $("<span>", {
                 html:$li.attr("label"),
                 label:$li.attr("label"),
-                link:$li.attr("link"),
+                url:$li.attr("url"),
                 type:$li.attr("type"),
                 dash:$li.attr("dash"),
                 muted:$li.attr("muted"),
@@ -216,36 +219,6 @@ Display.prototype = {
         }
 
         return $container;
-    },
-
-    // Readjusts the values of the option window to correctly align it
-    fixOptionsOffset: function ($options, repeat) {
-        $options = $options || $("#options");
-
-        if ($options) {
-            $options.css({
-                "left":$("#downloadBtn").offset().left,
-                "top":$("#downloadBtn").offset().top+$("#downloadBtn").height()+$("#downloadBtn").css("border-top-width").replace("px","")*2
-            });
-
-            // Call the same function again THREE more times
-            // with a 200ms INTERVAL
-            repeat = (!isNaN(repeat)) ? repeat+1 : 0;
-            if (repeat < 3) {
-                var _this = this;
-                setTimeout(function() {
-                    _this.fixOptionsOffset($options, repeat);
-                }, 200, $options, repeat);
-            }
-        } else {
-            console.log("potential error, fixOptionsOffset was given undefined");
-        }
-
-        // Prepend to the body if necessary
-        if ($("#options").length === 0 && $options) {
-            $("body").prepend($options);
-        }
-
     },
     getTags: function($li) {
         $tags = [];

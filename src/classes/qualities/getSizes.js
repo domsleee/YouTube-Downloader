@@ -1,14 +1,15 @@
-// Obtains the sizes of each of the links, adding
+// Obtains the sizes of each of the urls, adding
 // the "size" attribute to each li element, and setting
 // the size in kb/mb/gb etc on each element
 
 function GetSizes() {
+    this.SIZE_DP = 1;
     // No inherit properties
 }
 
 GetSizes.prototype = {
     getSize: function(qualities, $li, callback) {
-        var link = $li.attr("link");
+        var url = $li.attr("url");
 
         // Attempt to obtain the size from the qualities values
         var matchedQualities = qualities.items.listMatches("val", $li.attr("value"));
@@ -25,7 +26,7 @@ GetSizes.prototype = {
             // We must make a cross-domain request to determine the size from the return headers...
             GM_xmlhttpRequest({
                 method:"HEAD",
-                url:link,
+                url:url,
                 onload:function(xhr) {
                     if (xhr.readyState === 4 && xhr.status === 200) { //If it's okay
                         size = 0;
@@ -60,7 +61,7 @@ GetSizes.prototype = {
             if (sizes.hasOwnProperty(sizeFormat)) {
                 var minSize = sizes[sizeFormat];
                 if (size > minSize) {
-                    returnSize = (size/minSize).toFixed(SIZE_DP) + sizeFormat;
+                    returnSize = (size/minSize).toFixed(this.SIZE_DP) + sizeFormat;
                     break;
                 }
             }

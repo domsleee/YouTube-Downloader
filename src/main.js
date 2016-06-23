@@ -1,12 +1,4 @@
-//Constants
-var IFRAME_WAIT = 20; //Amount of time to wait for iframe requests (to download)
-var YQL_WAIT = 20; //Amount of time to wait for YQL (savedeo) requests
-var SIZE_DP = 1; //Amount of decimal places for size
-var MP3_WAIT = 10; //Amount of time to wait for mp3 to download
-
 //Variables
-var remain = 0; //How many requests are remaining...
-var idCount = 0; //A counter to ensure unique IDs on iframes
 var qualities = []; //Quality options
 var global_settings = localStorage.getObject('global_settings') || {};
 var default_setings = {           //Default settings
@@ -31,24 +23,29 @@ SetupGlobalSettings();
 var signature = new Signature();
 var display = new Display();
 var qualities = new Qualities();
+var download = new Download();
 //signature.fetchSignatureScript();
 
 /* -----------------  PART I, the local handler  ----------------------- */
 $(document).ready(function(){
-    signature.fetchSignatureScript(Program);
+    // Add events to the main frame
+    if (window.top === window) {
+        AddEvents();
+
+        Program();
+    }
 });
 
 // This function is run on every new page load....
 function Program() {
-    //console.log(ytplayer.config.assets.js);
-    //console.log(ytplayer.config.args.adaptive_fmts);
-    //console.log(ytplayer.config.args.dashmpd);
-    //console.log(ytplayer.config.args.url_encoded_fmt_stream_map);
+    // Make sure it is of the correct URL
+    var url = window.location.href;
+    if (url.indexOf("watch") === -1) return;
 
+    // Get the signature (required for decrypting)
+    signature.fetchSignatureScript(function() {
 
-    KillProcesses();
-    if (window.location.href.indexOf("watch") > -1) {
-        console.log(window.location.href);
+        KillProcesses();
         // Reset global properties
         global_properties = {
             audio_size:false,
@@ -69,7 +66,7 @@ function Program() {
             if (global_settings.ignoreTypes.indexOf("mp3") === -1){
                 qualities.items.push({
                     val:-audios[j],
-                    link:redirect+"&q="+audios[j],
+                    url:redirect+"&q="+audios[j],
                     text:audios[j].toString()+"kbps ",
                     type:"mp3",
                     hidden:false,
@@ -81,34 +78,22 @@ function Program() {
         /*
         Download codes
 
-        console.log("Trying to download:", url);
-        if (typeof(GM_download) !== undefined) {
-            console.log("No GM_download", typeof(GM_download));
-        } else {
-            GM_download(url, itag+".mp4");
-        }
-
         */
 
         // Update the download button, set it to be ENABLED
         // with text "Download"
         display.updateDownloadButton("Download");
 
-        // Initialise the options
-        $options = display.initOptions(qualities, $("#downloadBtnInfo"));
+        // Initialise the options & add it to the frame
+        display.initOptions(qualities, $("#downloadBtnInfo"));
 
         //If it already exists, don't bother
         //if ($("#downloadBtn").length > 0) return;
 
-        // Realigns options window
-        display.fixOptionsOffset($options);
-
         // Update the display (fetch sizes as well)
         display.update();
 
-        // Add events to the main frame
-        AddEvents();
-    }
+    });
 }
 
 function HandleVal(val, text, type, exempt){ //Return the correct value
@@ -120,37 +105,38 @@ function HandleVal(val, text, type, exempt){ //Return the correct value
     return val;
 }
 
+// Adds events to the window
+function AddEvents() {
+    var _this = this;
 
-function AddEvents() { //Adds events to the window
-    console.log("ADDING EVENTS");
+    // Call the function on page change
+    this.lastURL = window.location.href;
+    setInterval(function() {
+        var newURL = window.location.href;
+        if (newURL !== _this.lastURL) {
+            this.lastURL = newURL;
+            Program();
+        }
+    }, 200);
 
-    var $options = $("#options");
-    var $downloadBtnInfo = $("#downloadBtnInfo");
-
-    // As soon as document is ready, realign options
-    $(document).ready(function(){
-        display.fixOptionsOffset($options);
-    });
-
-    // Realign options on focus/resize
-    $(window).on("blur focus", function(e) {
-        display.fixOptionsOffset($options);
-    });
-    $(window).resize(function() {
-        display.fixOptionsOffset($options);
+    $(document).on("click", "#downloadBtn", function() {
+        // Ensure that the button is ENABLED
+        if (!$(this).hasClass("disabled")) {
+            var $span = $("#downloadBtnInfo span");
+            $(this).toggleState();
+            download.getVid($span);
+        }
     });
 
     // Toggle options on info click
-    $downloadBtnInfo.off("click");
-    $downloadBtnInfo.click(function() {
-        console.log("H");
-        $options.toggle();
+    $(document).on("click", "#downloadBtnInfo", function() {
+        $("#options").toggle();
     });
 
     //Show options on options click
     $(document).on("click", "#options li", function() {
         // Close the options
-        $options.toggle();
+        $("#options").toggle();
 
         // Update the relevant settings
         global_settings.quality = Number($(this).attr("value"));
@@ -164,10 +150,15 @@ function AddEvents() { //Adds events to the window
         display.update();
     });
 
-    //Hide options on document click
-    $(document).click(function(e){
-        if (e.target.id === 'downloadBtnInfo' || $(e.target).parent().attr("id") === 'downloadBtnInfo') return;
-        $options.hide();
+    // Hide options on document click
+    $(document).click(function(e) {
+        // If it matches the info or is a child of the top info, ignore
+        if (e.target.id === "downloadBtnInfo" || $(e.target).parent().attr("id") === "downloadBtnInfo") {
+            return;
+        }
+
+        // Hide the options
+        $("#options").hide();
     });
 }
 
