@@ -161,10 +161,12 @@ function Display() {
 }
 
 Display.prototype = {
-    update: function(sizes) {
+    update: function() {
         var _this = this;
+        var sizes = qualities.sizes;
 
         // Main window
+        var $downloadBtnInfo = $("#downloadBtnInfo");
         sizes.getSize(qualities, $downloadBtnInfo.find("span"), function($span, size) {
             _this.updateDisplay(sizes, qualities, $span, size, true);
         });
@@ -179,9 +181,9 @@ Display.prototype = {
     },
     // Initialises the display
     initOptions: function(qualities, $downloadBtnInfo) {
-        // Fallback options
+        // Fallback for setting to top value
+        var $topEl = false;
         var qualitySet = false;
-        var $firstSpanInfo;
 
         // Reset
         this.updateInfo(false);
@@ -201,50 +203,41 @@ Display.prototype = {
                 type:quality.type,
                 label:quality.label,
                 style:"display:"+display,
-                requiresAudio:quality.requiresAudio,
+                dash:quality.dash,
+                muted:quality.muted,
                 mp3:quality.mp3,
                 size:quality.size
             });
 
-            // Tags
+            // Tags - get them and then append them to the $li
             $tags = this.getTags($li);
-            for (var j = 0; j<$tags.length; j++) $li.append($tags[j].clone());
-
-            // For the top bar
-            var $spanInfo = $("<span>", {
-                html:quality.text,
-                label:$li.attr("label"),
-                link:$li.attr("link"),
-                type:$li.attr("type"),
-                requiresAudio:$li.attr("requiresAudio"),
-                mp3:$li.attr("mp3"),
-                value:quality.val
-            });
-            if (!$firstSpanInfo) $firstSpanInfo = $spanInfo;
-
-            // Add tags to info
-            // for (var j = 0; j<$tags.length; j++) $spanInfo.append($tags[j].clone());
-
-            // If it matches the set quality, assign it to the info box
-            if (Number($li.attr("value")) === global_settings.quality && $li.attr("type") === global_settings.type && !qualitySet) {
-                this.updateInfo($spanInfo);
-                qualitySet = true;
+            for (var j = 0; j<$tags.length; j++) {
+                $li.append($tags[j]);
             }
 
+            // Add the $li to the $options
             $options.append($li);
+
+            // Add the first as a fallback
+            if (!$topEl) $topEl = $li;
+
+            // If it matches the set quality, assign it to the info box
+            var sameQuality = (Number($li.attr("value")) === global_settings.quality);
+            var sameType    = ($li.attr("type") === global_settings.type);
+            if (sameQuality && sameType) {
+                $topEl = $li;
+            }
         }
 
-        // If no quality is set
-        if (!qualitySet) {
-            this.updateInfo($firstSpanInfo);
-        }
+        // Update the top panel with the top element
+        this.updateInfo($topEl);
 
         return $options;
     },
     // Updates the display
     updateDisplay: function(sizes, qualities, $li, size, forceNeutralFloat) {
         // Attempt to obtain the size from the qualities values
-        var matchedQualities = qualities.listMatches("val", $li.attr("value"));
+        var matchedQualities = qualities.items.listMatches("val", $li.attr("value"));
         if (matchedQualities.length > 0) {
             matchedQualities[0].size = size;
         }
@@ -263,8 +256,8 @@ Display.prototype = {
         }
 
         // If it is of the DASH format
-        if ($li.attr("requiresAudio") === "true") {
-            if (global_properties.audio_size){
+        if ($li.attr("dash") === "true") {
+            if (global_properties.audio_size) {
                 // Let the size be the sum of the size and the audio size
                 size = parseInt(size) + parseInt(global_properties.audio_size);
 
@@ -308,7 +301,9 @@ Display.prototype = {
         $button.find("button").attr("class", disabledText);
         $button.find("span").html(text);
     },
-    updateInfo: function ($span) {
+
+    // Update the downloadBtnInfo (top, non drop-down)
+    updateInfo: function ($li) {
         var $downloadBtnInfo = $("#downloadBtnInfo");
 
         // Add it if it doesn't exist
@@ -325,7 +320,18 @@ Display.prototype = {
         }
 
         // If an element was passed, prepend it
-        if ($span) {
+        if ($li) {
+            var $span = $("<span>", {
+                html:$li.attr("label"),
+                label:$li.attr("label"),
+                link:$li.attr("link"),
+                type:$li.attr("type"),
+                dash:$li.attr("dash"),
+                muted:$li.attr("muted"),
+                mp3:$li.attr("mp3"),
+                value:$li.attr("val")
+            });
+
             // Remove pre-existing span element
             $downloadBtnInfo.find("span").remove();
 
@@ -385,11 +391,19 @@ Display.prototype = {
             html:$li.attr("type")
         }));
 
-        var requiresAudio = $li.attr("requiresAudio");
-        if (requiresAudio && requiresAudio !== "false"){
+        var dash = $li.attr("dash");
+        if (dash && dash !== "false") {
             $tags.push($("<span>", {
                 class:"tag ignoreMouse",
                 html:"DASH"
+            }));
+        }
+
+        var muted = $li.attr("muted");
+        if (muted && muted !== "false") {
+            $tags.push($("<span>", {
+                class:"tag ignoreMouse",
+                html:"MUTED"
             }));
         }
 
@@ -703,7 +717,7 @@ Qualities.prototype = {
 			var itag = parseInt(url.getSetting("itag"), 10);
 			var size = false;
 
-
+			// Get data from the ITAG identifier
 			var tag = this.itags[itag] || {};
 
 			var newType = type.split("/")[1];
@@ -712,6 +726,7 @@ Qualities.prototype = {
 				console.log(decodeURIComponent(url));
 			}
 
+			// Get the label from the tag
 			var label = this.getLabel(tag);
 
 			// If we have content-length, we can find size IMMEDIATELY
@@ -729,17 +744,23 @@ Qualities.prototype = {
                 });
             }
 
-            // Append to qualities
-			qualities.items.push({
+            // Append to qualities (if it shouldn't be ignored)
+            var item = {
 				itag:itag,
-				url:url,
+				link:url,
 				size:size,
 				type:newType,
 				dash:tag.dash || false,
+				muted:tag.muted || false,
 				label:label,
+				text:label,
 				audio:tag.url || false
-			});
+			};
+			if (this.checkValid(item)) {
+				qualities.items.push(item);
+			}
 
+			// Move on to the next item
 			i++;
 			url = decodeURIComponent(potential.getSetting("url", i));
 		}
@@ -753,6 +774,8 @@ Qualities.prototype = {
 			if (tag.fps) {
 				label += tag.fps.toString();
 			}
+		} else if (tag.audio) {
+			label = "Audio";
 		}
 
 		return label;
@@ -767,9 +790,22 @@ Qualities.prototype = {
 	    if (isNaN(b.val)) b.val = 0;
 	    return Number(b.val) - Number(a.val);
 	},
-	getSizes: function() {
-		// Obtain the sizes for all the elements
-		// this.sizes.update(this);
+
+	// Check if the item should be ignored or not
+	checkValid: function(item) {
+		var valid = true;
+
+		// If it is muted and we are ignoring muted
+		if (global_settings.ignoreMuted && item.muted) {
+			valid = false;
+		}
+
+		// If it matches a blacklisted type
+		if (global_settings.ignoreTypes.indexOf(item.type) !== -1) {
+			valid =false;
+		}
+
+		return valid;
 	}
 };
 
@@ -780,7 +816,7 @@ Qualities.prototype = {
 // the size in kb/mb/gb etc on each element
 
 function GetSizes() {
-    // No inherit proeprties
+    // No inherit properties
 }
 
 GetSizes.prototype = {
@@ -788,7 +824,7 @@ GetSizes.prototype = {
         var link = $li.attr("link");
 
         // Attempt to obtain the size from the qualities values
-        var matchedQualities = qualities.listMatches("val", $li.attr("value"));
+        var matchedQualities = qualities.items.listMatches("val", $li.attr("value"));
         var size = (matchedQualities.length > 0) ? matchedQualities[0].size : false;
 
         if (size) {
@@ -1193,8 +1229,8 @@ function Program() {
         // Realigns options window
         display.fixOptionsOffset($options);
 
-        // Update the qualities
-        qualities.getSizes();
+        // Update the display (fetch sizes as well)
+        display.update();
 
         // Add events to the main frame
         AddEvents();
@@ -1304,13 +1340,20 @@ function AddEvents() { //Adds events to the window
     });
 
     //Show options on options click
-    $(document).on("click", "#options li", function(){
+    $(document).on("click", "#options li", function() {
+        // Close the options
         $options.toggle();
+
+        // Update the relevant settings
         global_settings.quality = Number($(this).attr("value"));
         global_settings.type = $(this).attr("type");
         UpdateGlobalSettings();
-        qualities.resetDisplay($downloadBtnInfo, $options);
-        sizes.update(qualities);
+
+        // Update the info
+        display.updateInfo($(this));
+
+        // Update the display
+        display.update();
     });
 
     //Hide options on document click

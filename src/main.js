@@ -102,8 +102,8 @@ function Program() {
         // Realigns options window
         display.fixOptionsOffset($options);
 
-        // Update the qualities
-        qualities.getSizes();
+        // Update the display (fetch sizes as well)
+        display.update();
 
         // Add events to the main frame
         AddEvents();
@@ -213,13 +213,20 @@ function AddEvents() { //Adds events to the window
     });
 
     //Show options on options click
-    $(document).on("click", "#options li", function(){
+    $(document).on("click", "#options li", function() {
+        // Close the options
         $options.toggle();
+
+        // Update the relevant settings
         global_settings.quality = Number($(this).attr("value"));
         global_settings.type = $(this).attr("type");
         UpdateGlobalSettings();
-        qualities.resetDisplay($downloadBtnInfo, $options);
-        sizes.update(qualities);
+
+        // Update the info
+        display.updateInfo($(this));
+
+        // Update the display
+        display.update();
     });
 
     //Hide options on document click

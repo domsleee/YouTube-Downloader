@@ -3,7 +3,7 @@
 // the size in kb/mb/gb etc on each element
 
 function GetSizes() {
-    // No inherit proeprties
+    // No inherit properties
 }
 
 GetSizes.prototype = {
@@ -11,7 +11,7 @@ GetSizes.prototype = {
         var link = $li.attr("link");
 
         // Attempt to obtain the size from the qualities values
-        var matchedQualities = qualities.listMatches("val", $li.attr("value"));
+        var matchedQualities = qualities.items.listMatches("val", $li.attr("value"));
         var size = (matchedQualities.length > 0) ? matchedQualities[0].size : false;
 
         if (size) {

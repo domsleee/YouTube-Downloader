@@ -147,7 +147,7 @@ Qualities.prototype = {
 			var itag = parseInt(url.getSetting("itag"), 10);
 			var size = false;
 
-
+			// Get data from the ITAG identifier
 			var tag = this.itags[itag] || {};
 
 			var newType = type.split("/")[1];
@@ -156,6 +156,7 @@ Qualities.prototype = {
 				console.log(decodeURIComponent(url));
 			}
 
+			// Get the label from the tag
 			var label = this.getLabel(tag);
 
 			// If we have content-length, we can find size IMMEDIATELY
@@ -173,17 +174,23 @@ Qualities.prototype = {
                 });
             }
 
-            // Append to qualities
-			qualities.items.push({
+            // Append to qualities (if it shouldn't be ignored)
+            var item = {
 				itag:itag,
-				url:url,
+				link:url,
 				size:size,
 				type:newType,
 				dash:tag.dash || false,
+				muted:tag.muted || false,
 				label:label,
+				text:label,
 				audio:tag.url || false
-			});
+			};
+			if (this.checkValid(item)) {
+				qualities.items.push(item);
+			}
 
+			// Move on to the next item
 			i++;
 			url = decodeURIComponent(potential.getSetting("url", i));
 		}
@@ -197,6 +204,8 @@ Qualities.prototype = {
 			if (tag.fps) {
 				label += tag.fps.toString();
 			}
+		} else if (tag.audio) {
+			label = "Audio";
 		}
 
 		return label;
@@ -211,8 +220,21 @@ Qualities.prototype = {
 	    if (isNaN(b.val)) b.val = 0;
 	    return Number(b.val) - Number(a.val);
 	},
-	getSizes: function() {
-		// Obtain the sizes for all the elements
-		// this.sizes.update(this);
+
+	// Check if the item should be ignored or not
+	checkValid: function(item) {
+		var valid = true;
+
+		// If it is muted and we are ignoring muted
+		if (global_settings.ignoreMuted && item.muted) {
+			valid = false;
+		}
+
+		// If it matches a blacklisted type
+		if (global_settings.ignoreTypes.indexOf(item.type) !== -1) {
+			valid =false;
+		}
+
+		return valid;
 	}
 };
