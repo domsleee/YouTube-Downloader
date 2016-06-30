@@ -1206,7 +1206,7 @@ Signature.prototype = {
 //Variables
 var global_settings = localStorage.getObject('global_settings') || {};
 var default_setings = {         // Default settings
-    quality:72060000,           // Quality selected
+    quality:7200000,            // Quality selected (720p60)
     ignoreMuted:true,           // Ignore muted
     ignoreTypes:["webm"],       // Ignore webm types (muxing doesn't work atm)
     ignoreVals:[18, 22],        // Ignore values
@@ -1229,7 +1229,7 @@ var download = new Download();
 // Run the script ONLY if it's on the top
 if (window.top === window) {
     AddEvents();
-    setTimeout(Program, 2000);
+    Program();
 }
 
 // This function is run on every new page load....
