@@ -10,6 +10,7 @@
 // @license      Creative Commons; http://creativecommons.org/licenses/by/4.0/
 // @require      http://code.jquery.com/jquery-1.11.0.min.js
 // @grant        GM_xmlhttpRequest
+// @grant        GM_download
 // ==/UserScript==
 
 // Download icon is made by Google at http://www.google.com under Creative Commons 3.0

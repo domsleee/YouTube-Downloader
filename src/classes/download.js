@@ -1,8 +1,8 @@
-// Generates the display, updates the display, all
-// things related to the interface can be found here
+// Functions that are used to download the video and audio
+// files
 
 function Download() {
-
+    // Construct
 }
 
 Download.prototype = {
@@ -37,7 +37,6 @@ Download.prototype = {
         if (global_settings.label) str = str+" "+label.toString();
         return str;
     },
-
     // Download audio if required
     handleAudio: function(url, name) {
         // Download the audio file
@@ -69,6 +68,10 @@ Download.prototype = {
             GM_download(url, name);
         }
     },
+
+    // Saves using the old method
+    // NOTE: Does not work for audio or DASH formats
+    //       will download as "videoplayback"
     fallbackSave: function(url) {
         var save = document.createElement('a');
         save.target = "_blank";

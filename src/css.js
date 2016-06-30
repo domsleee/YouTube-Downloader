@@ -1,5 +1,6 @@
 // This function adds styling to the page by
 // injecting CSS into the document
+
 (function() {
     var css = {
         ".disabled": {

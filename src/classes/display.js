@@ -57,7 +57,6 @@ Display.prototype = {
         });
 
         for (i = 0; i<qualities.items.length; i++) {
-            console.log(i);
             var quality = qualities.items[i];
             var display = (quality.hidden) ? "none" : "inherit";
             $li = $("<li>", {

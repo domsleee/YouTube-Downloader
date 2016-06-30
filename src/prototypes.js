@@ -27,7 +27,7 @@ String.prototype.getSetting = function(setting, index) {
 
 String.prototype.setSetting = function(setting, value) {
     var newString = this;
-    var hasQuestionMark = (newString.indexOf("?") != -1);
+    var hasQuestionMark = (newString.indexOf("?") !== -1);
     if (!hasQuestionMark) {
         newString += "?";
 

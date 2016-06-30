@@ -10,6 +10,7 @@
 // @license      Creative Commons; http://creativecommons.org/licenses/by/4.0/
 // @require      http://code.jquery.com/jquery-1.11.0.min.js
 // @grant        GM_xmlhttpRequest
+// @grant        GM_download
 // ==/UserScript==
 
 // Download icon is made by Google at http://www.google.com under Creative Commons 3.0
@@ -46,7 +47,7 @@ String.prototype.getSetting = function(setting, index) {
 
 String.prototype.setSetting = function(setting, value) {
     var newString = this;
-    var hasQuestionMark = (newString.indexOf("?") != -1);
+    var hasQuestionMark = (newString.indexOf("?") !== -1);
     if (!hasQuestionMark) {
         newString += "?";
 
@@ -192,7 +193,6 @@ Display.prototype = {
         });
 
         for (i = 0; i<qualities.items.length; i++) {
-            console.log(i);
             var quality = qualities.items[i];
             var display = (quality.hidden) ? "none" : "inherit";
             $li = $("<li>", {
@@ -405,11 +405,11 @@ Display.prototype = {
 
 // src/classes/download.js
 // =================================================
-// Generates the display, updates the display, all
-// things related to the interface can be found here
+// Functions that are used to download the video and audio
+// files
 
 function Download() {
-
+    // Construct
 }
 
 Download.prototype = {
@@ -444,7 +444,6 @@ Download.prototype = {
         if (global_settings.label) str = str+" "+label.toString();
         return str;
     },
-
     // Download audio if required
     handleAudio: function(url, name) {
         // Download the audio file
@@ -476,6 +475,10 @@ Download.prototype = {
             GM_download(url, name);
         }
     },
+
+    // Saves using the old method
+    // NOTE: Does not work for audio or DASH formats
+    //       will download as "videoplayback"
     fallbackSave: function(url) {
         var save = document.createElement('a');
         save.target = "_blank";
@@ -495,6 +498,7 @@ Download.prototype = {
 // This class handles the qualities that can be downloaded
 // This class also manages the the display of qualities (both
 // the top quality and the list of qualities)
+
 function Qualities() {
 	this.items = [];
 	this.sizes = new GetSizes();
@@ -715,8 +719,6 @@ Qualities.prototype = {
 			i++;
 			url = decodeURIComponent(potential.getSetting("url", i));
 		}
-
-		console.log("LENGTH:",qualities.items.length);
 	},
 	getLabel: function(tag) {
 		var label = false;
@@ -736,12 +738,12 @@ Qualities.prototype = {
 		// Base value is the resolution OR 0
 		var val = tag.resolution || 0;
 
-		// Multiply it if it's fps
+		// Multiply if it has an fps tag (high frame rate)
 		if (tag.fps >= 30) {
 			val *= 100;
 		}
 
-		// Multiply if it's mp4
+		// Multiply if it is mp4
 		if (tag.type === "mp4") {
 			val *= 100;
 		}
@@ -1073,6 +1075,7 @@ Signature.prototype = {
 // =================================================
 // This function adds styling to the page by
 // injecting CSS into the document
+
 (function() {
     var css = {
         ".disabled": {
@@ -1207,7 +1210,6 @@ var default_setings = {         // Default settings
     ignoreMuted:true,           // Ignore muted
     ignoreTypes:["webm"],       // Ignore webm types (muxing doesn't work atm)
     ignoreVals:[18, 22],        // Ignore values
-    type:'mp4',                 // Default type
     label:true,                 // Have quality label on download
     signature_decrypt:false     // Obtained signature pattern
 };

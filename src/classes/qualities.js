@@ -1,6 +1,7 @@
 // This class handles the qualities that can be downloaded
 // This class also manages the the display of qualities (both
 // the top quality and the list of qualities)
+
 function Qualities() {
 	this.items = [];
 	this.sizes = new GetSizes();
@@ -221,8 +222,6 @@ Qualities.prototype = {
 			i++;
 			url = decodeURIComponent(potential.getSetting("url", i));
 		}
-
-		console.log("LENGTH:",qualities.items.length);
 	},
 	getLabel: function(tag) {
 		var label = false;
@@ -242,12 +241,12 @@ Qualities.prototype = {
 		// Base value is the resolution OR 0
 		var val = tag.resolution || 0;
 
-		// Multiply it if it's fps
+		// Multiply if it has an fps tag (high frame rate)
 		if (tag.fps >= 30) {
 			val *= 100;
 		}
 
-		// Multiply if it's mp4
+		// Multiply if it is mp4
 		if (tag.type === "mp4") {
 			val *= 100;
 		}
