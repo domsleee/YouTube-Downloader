@@ -142,50 +142,52 @@ Qualities.prototype = {
 	},
 	initialise: function() {
 		this.reset();
-		var potential = ytplayer.config.args.adaptive_fmts + ytplayer.config.args.url_encoded_fmt_stream_map
+		var potential = ytplayer.config.args.adaptive_fmts + ytplayer.config.args.url_encoded_fmt_stream_map;
 		var i = 1;
 
 		var url = decodeURIComponent(potential.getSetting("url", i));
 		while (url !== "false") {
 			url = url.split(",")[0];
+			var oldURL = url;
+			var s = url.getSetting("s") || potential.getSetting("s", i);
+			url = signature.decryptSignature(url, s);
 			var type = decodeURIComponent(url.getSetting("mime"));
-			var clen = decodeURIComponent(url.getSetting("clen"));
+			var clen = url.getSetting("clen");// || potential.getSetting("clen", i);
 			var itag = parseInt(url.getSetting("itag"), 10);
 			var size = false;
 
 			// Get data from the ITAG identifier
 			var tag = this.itags[itag] || {};
 
-			var newType = type.split("/")[1].split(",")[0];
-			if (newType !== tag.type) {
-				console.log("Error with "+itag+", "+newType+"!="+tag.type);
-				console.log(decodeURIComponent(url));
-			}
+			// Get the value from the tag
+			var val = this.getVal(tag);
 
 			// Get the label from the tag
 			var label = this.getLabel(tag);
 
 			// If we have content-length, we can find size IMMEDIATELY
 			if (clen !== "false") {
-				size = this.sizes.formatSize(clen);
+				size = parseInt(clen);
 			}
 
-			// If it is the audio url - find the size and update
+			// Get the type from the tag
+			assert(type.split("/").length > 1, "Incorrect type: "+type);
+			var newType = type.split("/")[1].split(",")[0];
+			if (newType !== tag.type) {
+				console.log("Error with "+itag+", "+newType+"!="+tag.type);
+				console.log(decodeURIComponent(url));
+			}
+
+			// Fix the types
 			if (newType === "mp4" && tag.audio) {
-                tag.type = "m4a";
-                var $li = $("<li>", {
-                    url:url
-                });
-                this.sizes.getSize($li, function($li, size) {
-                    global_properties.audio_size = size;
-                });
-            }
+				tag.type = "m4a";
+			}
+			if (newType === "mp4" && tag.dash) {
+				tag.type = "m4v";
+			}
 
-            // Get the value from the tag
-            var val = this.getVal(tag);
-
-            // Append to qualities (if it shouldn't be ignored)
-            var item = {
+			// Append to qualities (if it shouldn't be ignored)
+			var item = {
 				itag:itag,
 				url:url,
 				size:size,
@@ -201,11 +203,24 @@ Qualities.prototype = {
 				this.items.push(item);
 			}
 
+			// If it is the audio url - find the size and update
+			if (tag.type === "m4a" && tag.audio) {
+				var $li = $("<li>", {
+					url:url,
+					value:val,
+				});
+
+				this.sizes.getSize($li, function($li, size) {
+					global_properties.audio_size = size;
+				});
+			}
+
 			// Move on to the next item
 			i++;
 			url = decodeURIComponent(potential.getSetting("url", i));
 		}
-		potential.getSetting("url", i);
+
+		console.log("LENGTH:",qualities.items.length);
 	},
 	getLabel: function(tag) {
 		var label = false;
@@ -249,9 +264,9 @@ Qualities.prototype = {
 		this.items.sort(_this.sortDescending);
 	},
 	sortDescending: function(a, b) {
-	    if (isNaN(a.val)) a.val = 0;
-	    if (isNaN(b.val)) b.val = 0;
-	    return Number(b.val) - Number(a.val);
+		if (isNaN(a.val)) a.val = 0;
+		if (isNaN(b.val)) b.val = 0;
+		return Number(b.val) - Number(a.val);
 	},
 
 	// Check if the item should be ignored or not
@@ -265,7 +280,12 @@ Qualities.prototype = {
 
 		// If it matches a blacklisted type
 		if (global_settings.ignoreTypes.indexOf(item.type) !== -1) {
-			valid =false;
+			valid = false;
+		}
+
+		// If it matches a blacklisted value
+		if (global_settings.ignoreVals.indexOf(item.val) !== -1) {
+			valid = false;
 		}
 
 		return valid;

@@ -14,9 +14,14 @@ Storage.prototype.getObject = function(key) {
 
 // Get the setting from an encoded URL string
 String.prototype.getSetting = function(setting, index) {
-    index = index || 1;
-    var split = this.split(setting+"=")[index];
-    var val = (split) ? split.split("&")[0] : false;
+    index = index*2-1 || 1;
+    var val = false;
+    var regex = new RegExp("(?:\\?|&)"+setting+"=([^&|,]*)", "g");
+    var split = this.split(regex);
+    if (split.length > index) {
+        val = split[index];
+    }
+
     return val;
 };
 
@@ -38,6 +43,9 @@ String.prototype.setSetting = function(setting, value) {
     // Append the setting on the end
     var ampersand = (hasQuestionMark) ? "&" : "";
     newString += ampersand + setting + "=" + value;
+
+    // Remove multiple ampersand
+    newString = newString.replace(/&{2,}/g, "&");
 
     return newString;
 };

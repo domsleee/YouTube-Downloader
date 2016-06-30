@@ -4,9 +4,10 @@ var default_setings = {         // Default settings
     quality:72060000,           // Quality selected
     ignoreMuted:true,           // Ignore muted
     ignoreTypes:["webm"],       // Ignore webm types (muxing doesn't work atm)
+    ignoreVals:[18, 22],        // Ignore values
     type:'mp4',                 // Default type
     label:true,                 // Have quality label on download
-    signature:false             // Obtained signature
+    signature_decrypt:false     // Obtained signature pattern
 };
 var global_properties = {
     audio_size:false,
@@ -24,7 +25,7 @@ var download = new Download();
 // Run the script ONLY if it's on the top
 if (window.top === window) {
     AddEvents();
-    Program();
+    setTimeout(Program, 2000);
 }
 
 // This function is run on every new page load....

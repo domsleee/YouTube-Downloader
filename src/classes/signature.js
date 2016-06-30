@@ -8,17 +8,21 @@ function Signature() {
 
 Signature.prototype = {
     fetchSignatureScript: function(callback) {
+        var scriptURL = this.getScriptURL(ytplayer.config.assets.js);
+
+        // If it's only positive, it's wrong
+        if (!/,0,|^0,|,0$|\-/.test(global_settings.signature_decrypt)) {
+            global_settings.signature_decrypt = null;
+        }
+
+        global_settings.signature_decrypt = false;
         if (global_settings.signature_decrypt) {
+            console.log("Apparently it's defined???", global_settings.signature_decrypt)
             callback();
             return;
         }
 
         var _this = this;
-        var scriptURL = this.getScriptURL(ytplayer.config.assets.js);
-        if (!(/,0,|^0,|,0$|\-/.test(global_settings.signature_decrypt))) {
-            storageCode = null; // hack for only positive items
-        }
-
         try {
             GM_xmlhttpRequest({
                 method:"GET",
@@ -172,11 +176,11 @@ Signature.prototype = {
 
         return val;
     },
-    decryptSignature: function(url) {
+    decryptSignature: function(url, s) {
         function swap(a, b) {
-            var c=a[0];
-            a[0]=a[b%a.length];
-            a[b]=c;
+            var c = a[0];
+            a[0] = a[b%a.length];
+            a[b] = c;
             return a
         };
         function decode(sig, arr) { // encoded decryption
@@ -192,18 +196,21 @@ Signature.prototype = {
 
         url = decodeURIComponent(url);
         var sig = url.getSetting("signature") || url.getSetting("sig");
-        var s = url.getSetting("s");
 
         // Decryption is only required if signature is non-existant AND
         // there is an encrypted property (s)
         if (!sig) {
-            assert(s !== undefined);
+            assert(s !== "false", "S attribute not found!");
             sig = decode(s, global_settings.signature_decrypt);
-            url = url.setSetting("itag", sig);
+            if (sig === "leslaf") {
+                console.log(s);
+            }
+            url = url.setSetting("signature", sig);
         }
 
-        url = url.setSetting("signature", sig);
-        url = url.setSetting("ratebypass", "1");
-        return sig;
+        url = url.setSetting("ratebypass", "yes");
+        assert(url.getSetting("signature"), "URL does not have signature!");
+
+        return url;
     }
 };

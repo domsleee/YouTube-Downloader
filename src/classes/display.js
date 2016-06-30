@@ -57,6 +57,7 @@ Display.prototype = {
         });
 
         for (i = 0; i<qualities.items.length; i++) {
+            console.log(i);
             var quality = qualities.items[i];
             var display = (quality.hidden) ? "none" : "inherit";
             $li = $("<li>", {
@@ -134,7 +135,7 @@ Display.prototype = {
                 // Let the size be the sum of the size and the audio size
                 size = parseInt(size) + parseInt(global_properties.audio_size);
 
-                $li.find("span.size").html(qualities.sizes.formatSize(size));
+                $li.find("span.size").html(sizes.formatSize(size));
                 $li.find("span.size").css("color", this.SIZE_LOADED);
                 $li.attr("size", size);
 

@@ -33,6 +33,7 @@ GetSizes.prototype = {
                                 size = match[1];
                             }
                         }
+
                         callback($li, size);
                     }
                 }

@@ -33,9 +33,14 @@ Storage.prototype.getObject = function(key) {
 
 // Get the setting from an encoded URL string
 String.prototype.getSetting = function(setting, index) {
-    index = index || 1;
-    var split = this.split(setting+"=")[index];
-    var val = (split) ? split.split("&")[0] : false;
+    index = index*2-1 || 1;
+    var val = false;
+    var regex = new RegExp("(?:\\?|&)"+setting+"=([^&|,]*)", "g");
+    var split = this.split(regex);
+    if (split.length > index) {
+        val = split[index];
+    }
+
     return val;
 };
 
@@ -57,6 +62,9 @@ String.prototype.setSetting = function(setting, value) {
     // Append the setting on the end
     var ampersand = (hasQuestionMark) ? "&" : "";
     newString += ampersand + setting + "=" + value;
+
+    // Remove multiple ampersand
+    newString = newString.replace(/&{2,}/g, "&");
 
     return newString;
 };
@@ -184,6 +192,7 @@ Display.prototype = {
         });
 
         for (i = 0; i<qualities.items.length; i++) {
+            console.log(i);
             var quality = qualities.items[i];
             var display = (quality.hidden) ? "none" : "inherit";
             $li = $("<li>", {
@@ -261,7 +270,7 @@ Display.prototype = {
                 // Let the size be the sum of the size and the audio size
                 size = parseInt(size) + parseInt(global_properties.audio_size);
 
-                $li.find("span.size").html(qualities.sizes.formatSize(size));
+                $li.find("span.size").html(sizes.formatSize(size));
                 $li.find("span.size").css("color", this.SIZE_LOADED);
                 $li.attr("size", size);
 
@@ -627,50 +636,52 @@ Qualities.prototype = {
 	},
 	initialise: function() {
 		this.reset();
-		var potential = ytplayer.config.args.adaptive_fmts + ytplayer.config.args.url_encoded_fmt_stream_map
+		var potential = ytplayer.config.args.adaptive_fmts + ytplayer.config.args.url_encoded_fmt_stream_map;
 		var i = 1;
 
 		var url = decodeURIComponent(potential.getSetting("url", i));
 		while (url !== "false") {
 			url = url.split(",")[0];
+			var oldURL = url;
+			var s = url.getSetting("s") || potential.getSetting("s", i);
+			url = signature.decryptSignature(url, s);
 			var type = decodeURIComponent(url.getSetting("mime"));
-			var clen = decodeURIComponent(url.getSetting("clen"));
+			var clen = url.getSetting("clen");// || potential.getSetting("clen", i);
 			var itag = parseInt(url.getSetting("itag"), 10);
 			var size = false;
 
 			// Get data from the ITAG identifier
 			var tag = this.itags[itag] || {};
 
-			var newType = type.split("/")[1].split(",")[0];
-			if (newType !== tag.type) {
-				console.log("Error with "+itag+", "+newType+"!="+tag.type);
-				console.log(decodeURIComponent(url));
-			}
+			// Get the value from the tag
+			var val = this.getVal(tag);
 
 			// Get the label from the tag
 			var label = this.getLabel(tag);
 
 			// If we have content-length, we can find size IMMEDIATELY
 			if (clen !== "false") {
-				size = this.sizes.formatSize(clen);
+				size = parseInt(clen);
 			}
 
-			// If it is the audio url - find the size and update
+			// Get the type from the tag
+			assert(type.split("/").length > 1, "Incorrect type: "+type);
+			var newType = type.split("/")[1].split(",")[0];
+			if (newType !== tag.type) {
+				console.log("Error with "+itag+", "+newType+"!="+tag.type);
+				console.log(decodeURIComponent(url));
+			}
+
+			// Fix the types
 			if (newType === "mp4" && tag.audio) {
-                tag.type = "m4a";
-                var $li = $("<li>", {
-                    url:url
-                });
-                this.sizes.getSize($li, function($li, size) {
-                    global_properties.audio_size = size;
-                });
-            }
+				tag.type = "m4a";
+			}
+			if (newType === "mp4" && tag.dash) {
+				tag.type = "m4v";
+			}
 
-            // Get the value from the tag
-            var val = this.getVal(tag);
-
-            // Append to qualities (if it shouldn't be ignored)
-            var item = {
+			// Append to qualities (if it shouldn't be ignored)
+			var item = {
 				itag:itag,
 				url:url,
 				size:size,
@@ -686,11 +697,24 @@ Qualities.prototype = {
 				this.items.push(item);
 			}
 
+			// If it is the audio url - find the size and update
+			if (tag.type === "m4a" && tag.audio) {
+				var $li = $("<li>", {
+					url:url,
+					value:val,
+				});
+
+				this.sizes.getSize($li, function($li, size) {
+					global_properties.audio_size = size;
+				});
+			}
+
 			// Move on to the next item
 			i++;
 			url = decodeURIComponent(potential.getSetting("url", i));
 		}
-		potential.getSetting("url", i);
+
+		console.log("LENGTH:",qualities.items.length);
 	},
 	getLabel: function(tag) {
 		var label = false;
@@ -734,9 +758,9 @@ Qualities.prototype = {
 		this.items.sort(_this.sortDescending);
 	},
 	sortDescending: function(a, b) {
-	    if (isNaN(a.val)) a.val = 0;
-	    if (isNaN(b.val)) b.val = 0;
-	    return Number(b.val) - Number(a.val);
+		if (isNaN(a.val)) a.val = 0;
+		if (isNaN(b.val)) b.val = 0;
+		return Number(b.val) - Number(a.val);
 	},
 
 	// Check if the item should be ignored or not
@@ -750,7 +774,12 @@ Qualities.prototype = {
 
 		// If it matches a blacklisted type
 		if (global_settings.ignoreTypes.indexOf(item.type) !== -1) {
-			valid =false;
+			valid = false;
+		}
+
+		// If it matches a blacklisted value
+		if (global_settings.ignoreVals.indexOf(item.val) !== -1) {
+			valid = false;
 		}
 
 		return valid;
@@ -794,6 +823,7 @@ GetSizes.prototype = {
                                 size = match[1];
                             }
                         }
+
                         callback($li, size);
                     }
                 }
@@ -840,17 +870,21 @@ function Signature() {
 
 Signature.prototype = {
     fetchSignatureScript: function(callback) {
+        var scriptURL = this.getScriptURL(ytplayer.config.assets.js);
+
+        // If it's only positive, it's wrong
+        if (!/,0,|^0,|,0$|\-/.test(global_settings.signature_decrypt)) {
+            global_settings.signature_decrypt = null;
+        }
+
+        global_settings.signature_decrypt = false;
         if (global_settings.signature_decrypt) {
+            console.log("Apparently it's defined???", global_settings.signature_decrypt)
             callback();
             return;
         }
 
         var _this = this;
-        var scriptURL = this.getScriptURL(ytplayer.config.assets.js);
-        if (!(/,0,|^0,|,0$|\-/.test(global_settings.signature_decrypt))) {
-            storageCode = null; // hack for only positive items
-        }
-
         try {
             GM_xmlhttpRequest({
                 method:"GET",
@@ -1004,11 +1038,11 @@ Signature.prototype = {
 
         return val;
     },
-    decryptSignature: function(url) {
+    decryptSignature: function(url, s) {
         function swap(a, b) {
-            var c=a[0];
-            a[0]=a[b%a.length];
-            a[b]=c;
+            var c = a[0];
+            a[0] = a[b%a.length];
+            a[b] = c;
             return a
         };
         function decode(sig, arr) { // encoded decryption
@@ -1024,19 +1058,22 @@ Signature.prototype = {
 
         url = decodeURIComponent(url);
         var sig = url.getSetting("signature") || url.getSetting("sig");
-        var s = url.getSetting("s");
 
         // Decryption is only required if signature is non-existant AND
         // there is an encrypted property (s)
         if (!sig) {
-            assert(s !== undefined);
+            assert(s !== "false", "S attribute not found!");
             sig = decode(s, global_settings.signature_decrypt);
-            url = url.setSetting("itag", sig);
+            if (sig === "leslaf") {
+                console.log(s);
+            }
+            url = url.setSetting("signature", sig);
         }
 
-        url = url.setSetting("signature", sig);
-        url = url.setSetting("ratebypass", "1");
-        return sig;
+        url = url.setSetting("ratebypass", "yes");
+        assert(url.getSetting("signature"), "URL does not have signature!");
+
+        return url;
     }
 };
 
@@ -1177,9 +1214,10 @@ var default_setings = {         // Default settings
     quality:72060000,           // Quality selected
     ignoreMuted:true,           // Ignore muted
     ignoreTypes:["webm"],       // Ignore webm types (muxing doesn't work atm)
+    ignoreVals:[18, 22],        // Ignore values
     type:'mp4',                 // Default type
     label:true,                 // Have quality label on download
-    signature:false             // Obtained signature
+    signature_decrypt:false     // Obtained signature pattern
 };
 var global_properties = {
     audio_size:false,
@@ -1197,7 +1235,7 @@ var download = new Download();
 // Run the script ONLY if it's on the top
 if (window.top === window) {
     AddEvents();
-    Program();
+    setTimeout(Program, 2000);
 }
 
 // This function is run on every new page load....
