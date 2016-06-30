@@ -16,7 +16,7 @@ Storage.prototype.getObject = function(key) {
 String.prototype.getSetting = function(setting, index) {
     index = index*2-1 || 1;
     var val = false;
-    var regex = new RegExp("(?:\\?|&)"+setting+"=([^&|,]*)", "g");
+    var regex = new RegExp("(?:\\?|&|^|,)"+setting+"=([^&|,]*)", "g");
     var split = this.split(regex);
     if (split.length > index) {
         val = split[index];

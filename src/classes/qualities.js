@@ -201,6 +201,8 @@ Qualities.prototype = {
 			};
 			if (this.checkValid(item)) {
 				this.items.push(item);
+			} else {
+				console.log(item);
 			}
 
 			// If it is the audio url - find the size and update

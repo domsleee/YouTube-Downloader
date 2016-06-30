@@ -15,13 +15,6 @@ Signature.prototype = {
             global_settings.signature_decrypt = null;
         }
 
-        global_settings.signature_decrypt = false;
-        if (global_settings.signature_decrypt) {
-            console.log("Apparently it's defined???", global_settings.signature_decrypt)
-            callback();
-            return;
-        }
-
         var _this = this;
         try {
             GM_xmlhttpRequest({
@@ -200,11 +193,8 @@ Signature.prototype = {
         // Decryption is only required if signature is non-existant AND
         // there is an encrypted property (s)
         if (!sig) {
-            assert(s !== "false", "S attribute not found!");
+            assert(s !== "false" || !s, "S attribute not found!");
             sig = decode(s, global_settings.signature_decrypt);
-            if (sig === "leslaf") {
-                console.log(s);
-            }
             url = url.setSetting("signature", sig);
         }
 
