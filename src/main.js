@@ -40,6 +40,18 @@ function Program() {
         return;
     }
 
+    // Verify that the potential is LOADED, by comparing the
+    // number of SIGNATURES to the number of URLs
+    var potential = ytplayer.config.args.adaptive_fmts + ytplayer.config.args.url_encoded_fmt_stream_map || "";
+    var urlLen = potential.split("url=").length;
+    var sigLen = decodeURIComponent(potential).split(/(?:(?:&|,|\?|^)s|signature|sig)=/).length;
+    if (sigLen < urlLen && sigLen > 0) {
+        console.log(potential);
+        console.log("Signatures:", sigLen, ", URLs:", urlLen);
+        setTimeout(Program, 2000);
+        return;
+    }
+
     // Get the signature (required for decrypting)
     signature.fetchSignatureScript(function() {
         // Reset global properties

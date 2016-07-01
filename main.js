@@ -414,14 +414,11 @@ function Download() {
 
 Download.prototype = {
     // Download the file
-    getVid: function($span) {
+    getVid: function($span, title) {
         var type = $span.attr("type");
         var dash = ($span.attr("dash") === "true") ? true : false;
-        if (type === "mp4" && dash) {
-            type = "m4v";
-        }
 
-        var title = this.getTitle($span.attr("label"));
+        var title = title || this.getTitle($span.attr("label"));
         var name = title;
         var url = $span.attr("url").setSetting("title", encodeURIComponent(title));
 
@@ -445,9 +442,9 @@ Download.prototype = {
         return str;
     },
     // Download audio if required
-    handleAudio: function(url, name) {
+    handleAudio: function(name) {
         // Download the audio file
-        this.getVid($("#options").find("li[type=m4a]"));
+        this.getVid($("#options").find("li[type=m4a]"), name+" Audio");
 
         // Download the script
 
@@ -550,7 +547,7 @@ function Qualities() {
 		137: {
 			resolution:1080,
 			type:"mp4",
-			muted:true
+			dash:true
 		},
 		140: {
 			audio:true,
@@ -641,8 +638,8 @@ Qualities.prototype = {
 	initialise: function() {
 		this.reset();
 		var potential = ytplayer.config.args.adaptive_fmts + ytplayer.config.args.url_encoded_fmt_stream_map;
-		var i = 1;
 
+		var i = 1;
 		var url = decodeURIComponent(potential.getSetting("url", i));
 		while (url !== "false") {
 			url = url.split(",")[0];
@@ -699,8 +696,6 @@ Qualities.prototype = {
 			};
 			if (this.checkValid(item)) {
 				this.items.push(item);
-			} else {
-				console.log(item);
 			}
 
 			// If it is the audio url - find the size and update
@@ -1241,6 +1236,18 @@ function Program() {
     // If the old thing is still there, wait a while
     ytplayer = ytplayer || {};
     if ($("#downloadBtn").length > 0 || !ytplayer.config) {
+        setTimeout(Program, 2000);
+        return;
+    }
+
+    // Verify that the potential is LOADED, by comparing the
+    // number of SIGNATURES to the number of URLs
+    var potential = ytplayer.config.args.adaptive_fmts + ytplayer.config.args.url_encoded_fmt_stream_map || "";
+    var urlLen = potential.split("url=").length;
+    var sigLen = decodeURIComponent(potential).split(/(?:(?:&|,|\?|^)s|signature|sig)=/).length;
+    if (sigLen < urlLen && sigLen > 0) {
+        console.log(potential);
+        console.log("Signatures:", sigLen, ", URLs:", urlLen);
         setTimeout(Program, 2000);
         return;
     }

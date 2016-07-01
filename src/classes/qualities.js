@@ -53,7 +53,7 @@ function Qualities() {
 		137: {
 			resolution:1080,
 			type:"mp4",
-			muted:true
+			dash:true
 		},
 		140: {
 			audio:true,
@@ -144,8 +144,8 @@ Qualities.prototype = {
 	initialise: function() {
 		this.reset();
 		var potential = ytplayer.config.args.adaptive_fmts + ytplayer.config.args.url_encoded_fmt_stream_map;
-		var i = 1;
 
+		var i = 1;
 		var url = decodeURIComponent(potential.getSetting("url", i));
 		while (url !== "false") {
 			url = url.split(",")[0];
@@ -202,8 +202,6 @@ Qualities.prototype = {
 			};
 			if (this.checkValid(item)) {
 				this.items.push(item);
-			} else {
-				console.log(item);
 			}
 
 			// If it is the audio url - find the size and update

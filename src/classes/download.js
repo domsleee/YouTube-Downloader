@@ -7,14 +7,11 @@ function Download() {
 
 Download.prototype = {
     // Download the file
-    getVid: function($span) {
+    getVid: function($span, title) {
         var type = $span.attr("type");
         var dash = ($span.attr("dash") === "true") ? true : false;
-        if (type === "mp4" && dash) {
-            type = "m4v";
-        }
 
-        var title = this.getTitle($span.attr("label"));
+        var title = title || this.getTitle($span.attr("label"));
         var name = title;
         var url = $span.attr("url").setSetting("title", encodeURIComponent(title));
 
@@ -38,9 +35,9 @@ Download.prototype = {
         return str;
     },
     // Download audio if required
-    handleAudio: function(url, name) {
+    handleAudio: function(name) {
         // Download the audio file
-        this.getVid($("#options").find("li[type=m4a]"));
+        this.getVid($("#options").find("li[type=m4a]"), name+" Audio");
 
         // Download the script
 
