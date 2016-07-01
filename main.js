@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         YouTube Downloader
 // @namespace    https://greasyfork.org/users/10036
-// @version      0.09
-// @description  Download 60fps MP4 videos and 256kbps MP3 audio from YouTube
+// @version      0.10
+// @description  Download 60fps MP4 videos and 128kbps MP3 audio from YouTube
 // @author       D. Slee
 // @icon         http://youtube.com/favicon.ico
 // @include      http://www.youtube.com*
@@ -149,7 +149,7 @@ function Display() {
     this.$downloadIcon = $("<img>", {
         style:"margin-right:4.5px",
         class:'midalign',
-        src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA3ElEQVQ4T6WT7RHBQBCGn1RAB3RAB6hAVEA6oAI6QAdK0AE6oIOkAx0wb+bO7NxskjHZP7m53ffZj9tk9LSsp542wBgYhQQv4O0l8wBD4AhsEsEF2KUgD/AEJg2tybewEAvIgTWgb5upilMMiIArsExUD2Ae7u7ALJxLYAWomnqIB2DvpGwCxFAlLQTwepZY99sQrZKnpooIOQvwcbJr4oXzCpqRtVIA2591WojOqVixlQAa1K1h7BIqxhNLUrcg09Koz8Efq6055ekixWfr4mitf8/YFdzq7/03fgFd3CYQgbnh+gAAAABJRU5ErkJggg=="
+        src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAYCAYAAACbU/80AAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH4AcBDB8y3JusLQAAABl0RVh0Q29tbWVudABDcmVhdGVkIHdpdGggR0lNUFeBDhcAAAEwSURBVEjH7Za/TgJBEIe/PSAYEqKVnW/ga2hjxeNYEAs7o/Q+h7G3tvAJ7CmMHgnGf6CfzdAQInB3cg2/ZHOT3Z2ZL5Pc7KB21L6auznlkbNDGHWpn9Qc2KMejZIqNapZwOcDOAMegCz2UtjXwMF/A3wD9ymlu/kD9XXdYFnByrUWJG9HJTYCUJm2AFuAIgCp4FnpPvAEfAGf8V2kZ2AICOyvEn+dVnwLnEfwRyBPKRk9IEWyQ6ABnACnQHtp1DVfr0H4NCLpLEZSW2EfqS+rBqTAE3qlttXmDELNAupYfY97P+pEnVYNMIPYjaTNWL25oWYSlRgHTKUAE/VS3QmInjqcuzON5G9/AZSdBy6Am1iLhhqX/ZpVDCRjoFumEY1KAnRL+I4yYFBjJx5Q91j+C9lDhiZ57cSmAAAAAElFTkSuQmCC"
     });
     // Down select arrow (for dropdown)
     this.$downArrow = $("<img>", {
@@ -439,7 +439,7 @@ Download.prototype = {
         var label = (label) ? label : "";
         var str = $("title").html().split(" - YouTube")[0].replace(/"|'|\?|:|\%/g, "").replace(/\*/g, '-');
         if (global_settings.label) str = str+" "+label.toString();
-        str = str.replace(/\:|\?|\|/g, "");
+        str = str.replace(/\!|\+|\.|\:|\?|\|/g, "");
         return str;
     },
     // Download audio if required
@@ -518,7 +518,7 @@ function Qualities() {
 			type:"mp4"
 		},
 		36: {
-			resolution:180,
+			resolution:240,
 			type:"3gpp"
 		},
 		43: {
@@ -528,7 +528,7 @@ function Qualities() {
 		133: {
 			resolution:240,
 			type:"mp4",
-			muted:true
+			muted:true,
 		},
 		134: {
 			resolution:360,
@@ -600,6 +600,18 @@ function Qualities() {
 			audio:true,
 			type:"webm",
 		},
+		264: {
+			resolution:1440,
+			type:"mp4"
+		},
+		266: {
+			resolution:2160,
+			type:"mp4"
+		},
+		271: {
+			resolution:1440,
+			type:"webm"
+		},
 		278: {
 			resolution:140,
 			type:"webm",
@@ -628,7 +640,11 @@ function Qualities() {
 			fps:60,
 			type:"webm",
 			muted:true
-		}
+		},
+		313: {
+			resolution:2160,
+			type:"webm"
+		},
 	}
 }
 
@@ -1116,6 +1132,9 @@ Signature.prototype = {
         },
         "#downloadBtn span": {
             "font-size":"12px"
+        },
+        "#downloadBtn img": {
+            "height":"16px"
         },
         "#downloadBtnInfo": {
             "cursor":"default",

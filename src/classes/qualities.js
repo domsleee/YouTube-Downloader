@@ -23,7 +23,7 @@ function Qualities() {
 			type:"mp4"
 		},
 		36: {
-			resolution:180,
+			resolution:240,
 			type:"3gpp"
 		},
 		43: {
@@ -33,7 +33,7 @@ function Qualities() {
 		133: {
 			resolution:240,
 			type:"mp4",
-			muted:true
+			muted:true,
 		},
 		134: {
 			resolution:360,
@@ -105,6 +105,18 @@ function Qualities() {
 			audio:true,
 			type:"webm",
 		},
+		264: {
+			resolution:1440,
+			type:"mp4"
+		},
+		266: {
+			resolution:2160,
+			type:"mp4"
+		},
+		271: {
+			resolution:1440,
+			type:"webm"
+		},
 		278: {
 			resolution:140,
 			type:"webm",
@@ -133,7 +145,11 @@ function Qualities() {
 			fps:60,
 			type:"webm",
 			muted:true
-		}
+		},
+		313: {
+			resolution:2160,
+			type:"webm"
+		},
 	}
 }
 

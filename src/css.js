@@ -46,6 +46,9 @@
         "#downloadBtn span": {
             "font-size":"12px"
         },
+        "#downloadBtn img": {
+            "height":"16px"
+        },
         "#downloadBtnInfo": {
             "cursor":"default",
             "height":"22px",
