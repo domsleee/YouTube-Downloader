@@ -439,6 +439,7 @@ Download.prototype = {
         var label = (label) ? label : "";
         var str = $("title").html().split(" - YouTube")[0].replace(/"|'|\?|:|\%/g, "").replace(/\*/g, '-');
         if (global_settings.label) str = str+" "+label.toString();
+        str = str.replace(/\:|\?|\|/g, "");
         return str;
     },
     // Download audio if required
@@ -647,7 +648,7 @@ Qualities.prototype = {
 			var s = url.getSetting("s") || potential.getSetting("s", i);
 			url = signature.decryptSignature(url, s);
 			var type = decodeURIComponent(url.getSetting("mime"));
-			var clen = url.getSetting("clen");// || potential.getSetting("clen", i);
+			var clen = url.getSetting("clen") || potential.getSetting("clen", i);
 			var itag = parseInt(url.getSetting("itag"), 10);
 			var size = false;
 
@@ -1113,6 +1114,9 @@ Signature.prototype = {
         "#downloadBtn:hover": {
             "background-color":"darkgreen"
         },
+        "#downloadBtn span": {
+            "font-size":"12px"
+        },
         "#downloadBtnInfo": {
             "cursor":"default",
             "height":"22px",
@@ -1246,7 +1250,6 @@ function Program() {
     var urlLen = potential.split("url=").length;
     var sigLen = decodeURIComponent(potential).split(/(?:(?:&|,|\?|^)s|signature|sig)=/).length;
     if (sigLen < urlLen && sigLen > 0) {
-        console.log(potential);
         console.log("Signatures:", sigLen, ", URLs:", urlLen);
         setTimeout(Program, 2000);
         return;

@@ -153,7 +153,7 @@ Qualities.prototype = {
 			var s = url.getSetting("s") || potential.getSetting("s", i);
 			url = signature.decryptSignature(url, s);
 			var type = decodeURIComponent(url.getSetting("mime"));
-			var clen = url.getSetting("clen");// || potential.getSetting("clen", i);
+			var clen = url.getSetting("clen") || potential.getSetting("clen", i);
 			var itag = parseInt(url.getSetting("itag"), 10);
 			var size = false;
 

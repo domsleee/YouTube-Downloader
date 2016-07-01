@@ -46,7 +46,6 @@ function Program() {
     var urlLen = potential.split("url=").length;
     var sigLen = decodeURIComponent(potential).split(/(?:(?:&|,|\?|^)s|signature|sig)=/).length;
     if (sigLen < urlLen && sigLen > 0) {
-        console.log(potential);
         console.log("Signatures:", sigLen, ", URLs:", urlLen);
         setTimeout(Program, 2000);
         return;

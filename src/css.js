@@ -43,6 +43,9 @@
         "#downloadBtn:hover": {
             "background-color":"darkgreen"
         },
+        "#downloadBtn span": {
+            "font-size":"12px"
+        },
         "#downloadBtnInfo": {
             "cursor":"default",
             "height":"22px",
