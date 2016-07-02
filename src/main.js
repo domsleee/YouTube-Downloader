@@ -45,7 +45,7 @@ function Program() {
     var potential = ytplayer.config.args.adaptive_fmts + ytplayer.config.args.url_encoded_fmt_stream_map || "";
     var urlLen = potential.split("url=").length;
     var sigLen = decodeURIComponent(potential).split(/(?:(?:&|,|\?|^)s|signature|sig)=/).length;
-    if (sigLen < urlLen && sigLen > 0) {
+    if (sigLen < urlLen && sigLen > 1) {
         console.log("Signatures:", sigLen, ", URLs:", urlLen);
         setTimeout(Program, 2000);
         return;

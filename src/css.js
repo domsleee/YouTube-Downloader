@@ -47,7 +47,7 @@
             "font-size":"12px"
         },
         "#downloadBtn img": {
-            "height":"16px"
+            "height":"12px"
         },
         "#downloadBtnInfo": {
             "cursor":"default",
