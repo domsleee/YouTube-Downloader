@@ -13,7 +13,6 @@
 // @grant        GM_download
 // ==/UserScript==
 
-// Download icon is made by Google at http://www.google.com under Creative Commons 3.0
 // Down arrow selector icon is made by Freepik at http://www.freepik.com under Creative Commons 3.0
 
 // src/prototypes.js
@@ -132,6 +131,48 @@ $.fn.extend({
     },
 });
 
+// src/classes/Ajax.js
+// =================================================
+// Isolates the async functions from the modules
+
+function AjaxClass() {
+}
+
+AjaxClass.prototype = {
+	request: function(params) {
+		// Setup the request
+		var success = params.success;
+		var error   = params.error;
+
+		params.onload = function(xhr) {
+			if (xhr.readyState === 4 && xhr.status === 200) {
+				success(xhr);
+			} else {
+				console.log(xhr);
+				if (typeof error === "function") error(xhr);
+			}
+		}
+
+		// Call the request
+		GM_xmlhttpRequest(params);
+	},
+	getResponseHeader: function(xhr, type) {
+		var value = false;
+		if (typeof xhr.getResponseHeader === "function") {
+			value = xhr.getResponseHeader(type);
+		} else if (xhr.responseHeaders) {
+			var regex = new RegExp(type.split("-")[1]+": (.*)");
+			var match = regex.exec(xhr.responseHeaders);
+			if (match){
+				value = match[1];
+			}
+		}
+
+		// Return the value
+		return value;
+	}
+}
+
 // src/classes/display.js
 // =================================================
 // Generates the display, updates the display, all
@@ -149,7 +190,7 @@ function Display() {
     this.$downloadIcon = $("<img>", {
         style:"margin-right:4.5px",
         class:'midalign',
-        src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAYAAABr5z2BAAAABmJLR0QAAACAAAAYdqD/AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH4AcBEiwdlZl6PgAAABl0RVh0Q29tbWVudABDcmVhdGVkIHdpdGggR0lNUFeBDhcAAACwSURBVCjPnZIxCsJAEEXfBMUi2Nh7CxvBewjeIzmFeA5rKxsRPICFvV0aC7USCQG/zSISdoforz7D21fMDpIK/Z/CJIl47sAz9AEwAqwN9UhnCWxDnwArIP9FcDazI4CkIfCKQZkjsETvLMhagn5XQQPsgeprdgXWQN1FYMDOzA6fgdkJ2ET3kPjfWtJCkgVmJukSA3GOpJE0lzSVVKUg75AAHsANGHubLh1B7j0GyjfundRHLXQxTwAAAABJRU5ErkJggg=="
+        src:"https://raw.githubusercontent.com/Domination9987/YouTube-Downloader/master/graphics/downIconMed.png"
     });
     // Down select arrow (for dropdown)
     this.$downArrow = $("<img>", {
@@ -179,10 +220,9 @@ Display.prototype = {
         }
     },
     // Initialises the display
-    initOptions: function(qualities, $downloadBtnInfo) {
+    initOptions: function(qualities) {
         // Fallback for setting to top value
         var $topEl = false;
-        var qualitySet = false;
 
         // Reset
         this.updateInfo(false);
@@ -196,7 +236,7 @@ Display.prototype = {
             var quality = qualities.items[i];
             var display = (quality.hidden) ? "none" : "inherit";
             $li = $("<li>", {
-                html:quality.text,
+                html:quality.label,
                 value:quality.val,
                 url:quality.url,
                 type:quality.type,
@@ -221,8 +261,8 @@ Display.prototype = {
             if (!$topEl) $topEl = $li;
 
             // If it matches the set quality, assign it to the info box
-            var sameQuality = (Number($li.attr("value")) === global_settings.quality);
-            var sameType    = ($li.attr("type") === global_settings.type);
+            var sameQuality = (Number($li.attr("value")) === settings.get("quality"));
+            var sameType    = ($li.attr("type") === settings.get("type"));
             if (sameQuality && sameType) {
                 $topEl = $li;
             }
@@ -266,9 +306,9 @@ Display.prototype = {
 
         // If it is of the DASH format
         if ($li.attr("dash") === "true") {
-            if (global_properties.audio_size) {
+            if (globalProperties.audioSize) {
                 // Let the size be the sum of the size and the audio size
-                size = parseInt(size) + parseInt(global_properties.audio_size);
+                size = parseInt(size) + parseInt(globalProperties.audioSize);
 
                 $li.find("span.size").html(sizes.formatSize(size));
                 $li.find("span.size").css("color", this.SIZE_LOADED);
@@ -409,87 +449,87 @@ Display.prototype = {
 // files
 
 function Download() {
-    // Construct
+	// Construct
 }
 
 Download.prototype = {
-    // Download the file
-    getVid: function($span, title) {
-        var type = $span.attr("type");
-        var dash = ($span.attr("dash") === "true") ? true : false;
+	// Download the file
+	getVid: function($span, title) {
+		var type = $span.attr("type");
+		var dash = ($span.attr("dash") === "true") ? true : false;
 
-        var title = title || this.getTitle($span.attr("label"));
-        var name = title;
-        var url = $span.attr("url").setSetting("title", encodeURIComponent(title));
+		title = title || this.getTitle($span.attr("label"));
+		var name = title;
+		var url = $span.attr("url").setSetting("title", encodeURIComponent(title));
 
-        // Save to disk
-        this.saveToDisk(url, name+"."+type);
+		// Save to disk
+		this.saveToDisk(url, name+"."+type);
 
-        // If it requires audio, download it
-        if (dash) {
-            this.handleAudio(name);
-        }
+		// If it requires audio, download it
+		if (dash) {
+			this.handleAudio(name);
+		}
 
-        // Re-enable the button after 0.5 seconds
-        setTimeout(function() {
-            display.updateDownloadButton("Download");
-        }, 500);
-    },
-    getTitle: function(label) {
-        var label = (label) ? label : "";
-        var str = $("title").html().split(" - YouTube")[0].replace(/"|'|\?|:|\%/g, "").replace(/\*/g, '-');
-        if (global_settings.label) str = str+" "+label.toString();
-        str = str.replace(/\!|\+|\.|\:|\?|\|/g, "");
-        return str;
-    },
-    // Download audio if required
-    handleAudio: function(name) {
-        // Download the audio file
-        this.getVid($("#options").find("li[type=m4a]"), name+" Audio");
+		// Re-enable the button after 0.5 seconds
+		setTimeout(function() {
+			display.updateDownloadButton("Download");
+		}, 500);
+	},
+	getTitle: function(label) {
+		label = (label) ? label : "";
+		var str = $("title").html().split(" - YouTube")[0].replace(/"|'|\?|:|%/g, "").replace(/\*/g, '-');
+		if (settings.get("label")) str = str+" "+label.toString();
+		str = str.replace(/!|\+|\.|\:|\?|\|/g, "");
+		return str;
+	},
+	// Download audio if required
+	handleAudio: function(name) {
+		// Download the audio file
+		this.getVid($("#options").find("li[type=m4a]"), name+" Audio");
 
-        // Download the script
+		// Download the script
 
-        /*
-        var os = GetOs();
-        var text = MakeScript(settings.title, type, "m4a", "mp4", os);
-        settings.type = os.scriptType;
-        if (os.os === 'win'){
-            SaveToDisk(URL.createObjectURL(text), settings);
-        } else {
-            SaveToDisk("https://github.com/Domination9987/YouTube-Downloader/raw/master/muxer/Muxer.zip", settings);
-        }*/
-    },
-    getOs: function() {
-        var os = (navigator.appVersion.indexOf("Win") !== -1) ? "win" : "mac";
-        var scriptType = (os === "win") ? "bat" : "command";
-        return {os:os, scriptType:scriptType};
-    },
-    saveToDisk: function(url, name) {
-        console.log("Trying to download:", url);
-        if (typeof(GM_download) === "undefined") {
-            this.fallbackSave(url);
-            alert("Please enable GM_Download if you have videoplayback issues");
-        } else {
-            GM_download(url, name);
-        }
-    },
+		/*
+		var os = GetOs();
+		var text = MakeScript(settings.title, type, "m4a", "mp4", os);
+		settings.type = os.scriptType;
+		if (os.os === 'win'){
+			SaveToDisk(URL.createObjectURL(text), settings);
+		} else {
+			SaveToDisk("https://github.com/Domination9987/YouTube-Downloader/raw/master/muxer/Muxer.zip", settings);
+		}*/
+	},
+	getOs: function() {
+		var os = (navigator.appVersion.indexOf("Win") !== -1) ? "win" : "mac";
+		var scriptType = (os === "win") ? "bat" : "command";
+		return {os:os, scriptType:scriptType};
+	},
+	saveToDisk: function(url, name) {
+		console.log("Trying to download:", url);
+		if (typeof(GM_download) === "undefined") {
+			this.fallbackSave(url);
+			alert("Please enable GM_Download if you have videoplayback issues");
+		} else {
+			GM_download(url, name);
+		}
+	},
 
-    // Saves using the old method
-    // NOTE: Does not work for audio or DASH formats
-    //       will download as "videoplayback"
-    fallbackSave: function(url) {
-        var save = document.createElement('a');
-        save.target = "_blank";
-        save.download = true;
-        console.log(decodeURIComponent(url));
-        save.href = url;
-        (document.body || document.documentElement).appendChild(save);
-        save.onclick = function() {
-            (document.body || document.documentElement).removeChild(save);
-        };
-        save.click();
-    }
-}
+	// Saves using the old method
+	// NOTE: Does not work for audio or DASH formats
+	//       will download as "videoplayback"
+	fallbackSave: function(url) {
+		var save = document.createElement('a');
+		save.target = "_blank";
+		save.download = true;
+		console.log(decodeURIComponent(url));
+		save.href = url;
+		(document.body || document.documentElement).appendChild(save);
+		save.onclick = function() {
+			(document.body || document.documentElement).removeChild(save);
+		};
+		save.click();
+	}
+};
 
 // src/classes/qualities.js
 // =================================================
@@ -645,7 +685,7 @@ function Qualities() {
 			resolution:2160,
 			type:"webm"
 		},
-	}
+	};
 }
 
 Qualities.prototype = {
@@ -654,13 +694,12 @@ Qualities.prototype = {
 	},
 	initialise: function() {
 		this.reset();
-		var potential = ytplayer.config.args.adaptive_fmts + ytplayer.config.args.url_encoded_fmt_stream_map;
+		var potential = this.getPotential();
 
 		var i = 1;
 		var url = decodeURIComponent(potential.getSetting("url", i));
 		while (url !== "false") {
 			url = url.split(",")[0];
-			var oldURL = url;
 			var s = url.getSetting("s") || potential.getSetting("s", i);
 			url = signature.decryptSignature(url, s);
 			var type = decodeURIComponent(url.getSetting("mime"));
@@ -678,8 +717,8 @@ Qualities.prototype = {
 			var label = this.getLabel(tag);
 
 			// If we have content-length, we can find size IMMEDIATELY
-			if (clen !== "false") {
-				size = parseInt(clen);
+			if (clen) {
+				size = parseInt(clen, 10);
 			}
 
 			// Get the type from the tag
@@ -707,7 +746,6 @@ Qualities.prototype = {
 				dash:tag.dash || false,
 				muted:tag.muted || false,
 				label:label,
-				text:label,
 				audio:tag.url || false,
 				val:val,
 			};
@@ -723,7 +761,7 @@ Qualities.prototype = {
 				});
 
 				this.sizes.getSize($li, function($li, size) {
-					global_properties.audio_size = size;
+					globalProperties.audioSize = size;
 				});
 			}
 
@@ -784,21 +822,62 @@ Qualities.prototype = {
 		var valid = true;
 
 		// If it is muted and we are ignoring muted
-		if (global_settings.ignoreMuted && item.muted) {
+		if (settings.get("ignoreMuted") && item.muted) {
 			valid = false;
 		}
 
 		// If it matches a blacklisted type
-		if (global_settings.ignoreTypes.indexOf(item.type) !== -1) {
+		if (settings.get("ignoreTypes").indexOf(item.type) !== -1) {
 			valid = false;
 		}
 
 		// If it matches a blacklisted value
-		if (global_settings.ignoreVals.indexOf(item.val) !== -1) {
+		if (settings.get("ignoreVals").indexOf(item.val) !== -1) {
 			valid = false;
 		}
 
 		return valid;
+	},
+	// Get potential list
+	getPotential: function() {
+		assert(ytplayer !== undefined, "Ytplayer is undefined!");
+		var potential = ytplayer.config.args.adaptive_fmts + ytplayer.config.args.url_encoded_fmt_stream_map || "";
+		var validBefore = this.checkPotential(potential);
+		potential = potential.replace(/([0-9])s=/g, ",s=");
+		var validAfter = this.checkPotential(potential);
+
+		if (validBefore !== validAfter) {
+			console.log("SOMETHING CHANGED");
+		}
+		
+		return potential;
+	},
+	checkPotential: function(potential) {
+		var lengths = this.getPotentialLengths(potential);
+		var valid = (lengths.url >= lengths.url && lengths.sig > 1);
+
+		// Trace out why it isn't valid
+		if (!valid) {
+			var split = potential.split(",");
+			for (var i = 0; i<split.length; i++) {
+				var splitLengths = this.getPotentialLengths(split[i]);
+				if (splitLengths.url !== 1 || splitLengths.sig !== 1) {
+					console.log("checkPotential");
+					console.log(split[i]);
+					console.log(splitLengths.url, splitLengths,sig);
+				}
+			}
+		}
+
+		// Return if it is valid
+	    return valid;
+	},
+	// Get url and sig lengths from potential list
+	getPotentialLengths: function(potential) {
+		return {
+			url: potential.split("url=").length - 1,
+			sig: decodeURIComponent(potential).split(/(?:(?:&|,|\?|^)s|signature|sig)=/).length - 1
+		};
 	}
 };
 
@@ -809,8 +888,9 @@ Qualities.prototype = {
 // the size in kb/mb/gb etc on each element
 
 function GetSizes() {
+    // Number of decimal places to represent the
+    // size as
     this.SIZE_DP = 1;
-    // No inherit properties
 }
 
 GetSizes.prototype = {
@@ -825,23 +905,12 @@ GetSizes.prototype = {
             callback($li, size);
         } else {
             // We must make a cross-domain request to determine the size from the return headers...
-            GM_xmlhttpRequest({
+            Ajax.request({
                 method:"HEAD",
                 url:url,
-                onload:function(xhr) {
-                    if (xhr.readyState === 4 && xhr.status === 200) { //If it's okay
-                        size = 0;
-                        if (typeof xhr.getResponseHeader === "function") {
-                            size = xhr.getResponseHeader("Content-length");
-                        } else if (xhr.responseHeaders){
-                            var match = /length: (.*)/.exec(xhr.responseHeaders);
-                            if (match){
-                                size = match[1];
-                            }
-                        }
-
-                        callback($li, size);
-                    }
+                success:function(xhr) {
+                    var size = Ajax.getResponseHeader(xhr, "Content-length");
+                    callback($li, size);
                 }
             });
         }
@@ -859,7 +928,7 @@ GetSizes.prototype = {
         // Default of 0MB
         var returnSize = "0MB";
 
-        for (sizeFormat in sizes){
+        for (var sizeFormat in sizes){
             if (sizes.hasOwnProperty(sizeFormat)) {
                 var minSize = sizes[sizeFormat];
                 if (size > minSize) {
@@ -872,7 +941,50 @@ GetSizes.prototype = {
         // Return the string of return size
         return returnSize;
     }
+};
+
+// src/classes/settings.js
+// =================================================
+// This class handles the settings
+// Uses localStorage to remember the settings
+
+function Settings(defaultSettings) {
+	// Fetch the settings from localStorage
+	this.settings = localStorage.getObject("globalSettings") || {};
+
+	// Set the default settings
+	for (var key in defaultSettings) {
+		if (defaultSettings.hasOwnProperty(key)) {
+			if (this.settings[key] === undefined) {
+				this.settings[key] = defaultSettings[key];
+			}
+		}
+	}
+
+	// Update in localStorage
+	this.update();
 }
+
+Settings.prototype = {
+	// Update the settings
+	update: function() {
+		localStorage.setObject("globalSettings", this.settings);
+	},
+	// Get the value of a property
+	get: function(key) {
+		var value = this.settings[key];
+		if (Number(value) === value) {
+			value = Number(value);
+		}
+
+		return value;
+	},
+	// Set a new property
+	set: function(key, value) {
+		this.settings[key] = JSON.stringify(value);
+		this.update();
+	}
+};
 
 // src/classes/signature.js
 // =================================================
@@ -889,20 +1001,18 @@ Signature.prototype = {
         var scriptURL = this.getScriptURL(ytplayer.config.assets.js);
 
         // If it's only positive, it's wrong
-        if (!/,0,|^0,|,0$|\-/.test(global_settings.signature_decrypt)) {
-            global_settings.signature_decrypt = null;
+        if (!/,0,|^0,|,0$|\-/.test(settings.get("signatureCode"))) {
+            settings.set("signatureCode", null);
         }
 
         var _this = this;
         try {
-            GM_xmlhttpRequest({
+            Ajax.request({
                 method:"GET",
                 url:scriptURL,
-                onload:function(response) {
-                    if (response.readyState === 4 && response.status === 200) {
-                        _this.findSignatureCode(response.responseText);
-                        callback();
-                    }
+                success:function(xhr) {
+                    _this.findSignatureCode(xhr.responseText);
+                    callback();
                 }
             });
         } catch(e) { }
@@ -917,7 +1027,7 @@ Signature.prototype = {
         return scriptURL;
     },
     isInteger: function(n) {
-        return (typeof n==='number' && n%1==0);
+        return (typeof n === 'number' && n%1 === 0);
     },
     findSignatureCode: function(sourceCode) {
         // Signature function name
@@ -996,7 +1106,7 @@ Signature.prototype = {
                 } else if (codeLine.indexOf(',') >= 0) {
                     var swap = this.regMatch(codeLine, methods.swap);
                     swap = parseInt(swap, 10);
-                    assert(this.isInteger(swap) && swap > 0)
+                    assert(this.isInteger(swap) && swap > 0);
                     decodeArray.push(swap);
                 }
             }
@@ -1004,9 +1114,7 @@ Signature.prototype = {
 
         // Make sure it is a valid signature
         assert(this.isValidSignatureCode(decodeArray));
-
-        global_settings.signature_decrypt = decodeArray;
-        UpdateGlobalSettings();
+        globalProperties.signatureCode = decodeArray;
     },
     isValidSignatureCode: function(arr) {
         var valid = false;
@@ -1048,23 +1156,6 @@ Signature.prototype = {
         return val;
     },
     decryptSignature: function(url, s) {
-        function swap(a, b) {
-            var c = a[0];
-            a[0] = a[b%a.length];
-            a[b] = c;
-            return a
-        };
-        function decode(sig, arr) { // encoded decryption
-            var sigA = sig.split("");
-            for (var i = 0; i<arr.length; i++) {
-                var act = arr[i];
-                sigA = (act>0)?swap(sigA, act):((act==0)?sigA.reverse():sigA.slice(-act));
-            }
-
-            var result = sigA.join("");
-            return result;
-        }
-
         url = decodeURIComponent(url);
         var sig = url.getSetting("signature") || url.getSetting("sig");
 
@@ -1072,7 +1163,7 @@ Signature.prototype = {
         // there is an encrypted property (s)
         if (!sig) {
             assert(s !== "false" || !s, "S attribute not found!");
-            sig = decode(s, global_settings.signature_decrypt);
+            sig = this.decodeSignature(s, globalProperties.signatureCode);
             url = url.setSetting("signature", sig);
         }
 
@@ -1080,6 +1171,32 @@ Signature.prototype = {
         assert(url.getSetting("signature"), "URL does not have signature!");
 
         return url;
+    },
+    decodeSignature: function(s) {
+        var arr = globalProperties.signatureCode;
+        var sigA = s.split("");
+        for (var i = 0; i<arr.length; i++) {
+            var act = arr[i];
+
+            // Determine what sigA should be, based
+            // on polarity of act
+            if (act > 0) {
+                sigA = this.swap(sigA, act);
+            } else if (act === 0) {
+                sigA = sigA.reverse();
+            } else {
+                sigA = sigA.slice(-act);
+            }
+        }
+
+        var result = sigA.join("");
+        return result;
+    },
+    swap: function(a, b) {
+        var c = a[0];
+        a[0] = a[b%a.length];
+        a[b] = c;
+        return a;
     }
 };
 
@@ -1199,16 +1316,16 @@ Signature.prototype = {
         "img": {
             "pointer-events": "none"
         }
-    }
+    };
 
     // Append the CSS to the document
     var node = document.createElement("style");
     var html = "";
-    for (key in css) {
+    for (var key in css) {
         var props = css[key];
 
         html += key + " {\n";
-        for (prop in props) {
+        for (var prop in props) {
             html += "\t" + prop + ":" + props[prop] + ";\n";
         }
 
@@ -1221,156 +1338,132 @@ Signature.prototype = {
 
 // src/main.js
 // =================================================
-//Variables
-var global_settings = localStorage.getObject('global_settings') || {};
-var default_setings = {         // Default settings
-    quality:7200000,            // Quality selected (720p60)
-    ignoreMuted:true,           // Ignore muted
-    ignoreTypes:["webm"],       // Ignore webm types (muxing doesn't work atm)
-    ignoreVals:[18, 22],        // Ignore values
-    label:true,                 // Have quality label on download
-    signature_decrypt:false     // Obtained signature pattern
+// Variables
+var defaultSettings = {         // Default settings
+	quality:7200000,            // Quality selected (720p60)
+	ignoreMuted:true,           // Ignore muted
+	ignoreTypes:["webm"],       // Ignore webm types (muxing doesn't work atm)
+	ignoreVals:[18, 22],        // Ignore values
+	label:true,                 // Have quality label on download
 };
-var global_properties = {
-    audio_size:false,
+var globalProperties = {
+	audioSize:false,            // Size of audio
+	signatureCode:false         // Obtained signature pattern
 };
-
-// Ensures that all global_settings are set... if not, refer to default_settings
-SetupGlobalSettings();
 
 // Objects
+var Ajax = new AjaxClass();
+var settings  = new Settings(defaultSettings);
 var signature = new Signature();
-var display = new Display();
+var display   = new Display();
 var qualities = new Qualities();
-var download = new Download();
+var download  = new Download();
 
 // Run the script ONLY if it's on the top
 if (window.top === window) {
-    AddEvents();
-    Program();
+	AddEvents();
+	Program();
 }
 
 // This function is run on every new page load....
 function Program() {
-    // Make sure it is of the correct URL
-    var url = window.location.href;
-    if (url.indexOf("watch") === -1) return;
+	// Make sure it is of the correct URL
+	var url = window.location.href;
+	if (url.indexOf("watch") === -1) return;
 
-    // If the old thing is still there, wait a while
-    ytplayer = ytplayer || {};
-    if ($("#downloadBtn").length > 0 || !ytplayer.config) {
-        setTimeout(Program, 2000);
-        return;
-    }
+	// If the old thing is still there, wait a while
+	ytplayer = ytplayer || {};
+	if ($("#downloadBtn").length > 0 || !ytplayer.config) {
+		setTimeout(Program, 2000);
+		return;
+	}
 
-    // Verify that the potential is LOADED, by comparing the
-    // number of SIGNATURES to the number of URLs
-    var potential = ytplayer.config.args.adaptive_fmts + ytplayer.config.args.url_encoded_fmt_stream_map || "";
-    var urlLen = potential.split("url=").length;
-    var sigLen = decodeURIComponent(potential).split(/(?:(?:&|,|\?|^)s|signature|sig)=/).length;
-    if (sigLen < urlLen && sigLen > 1) {
-        console.log("Signatures:", sigLen, ", URLs:", urlLen);
-        setTimeout(Program, 2000);
-        return;
-    }
+	// Verify that the potential is LOADED, by comparing the
+	// number of SIGNATURES to the number of URLs
+	var potential = qualities.getPotential();
+	if (!qualities.checkPotential(potential)) {
+		setTimeout(Program, 2000);
+		return;
+	}
 
-    // Get the signature (required for decrypting)
-    signature.fetchSignatureScript(function() {
-        // Reset global properties
-        global_properties = {
-            audio_size:false,
-        };
-        qualities.initialise();
-        qualities.sortItems();
+	// Get the signature (required for decrypting)
+	signature.fetchSignatureScript(function() {
+		// Reset the audio size
+		globalProperties.audioSize = false;
+		qualities.initialise();
+		qualities.sortItems();
 
-        // Update the download button, set it to be ENABLED
-        // with text "Download"
-        display.updateDownloadButton("Download");
+		// Update the download button, set it to be ENABLED
+		// with text "Download"
+		display.updateDownloadButton("Download");
 
-        // Initialise the options & add it to the frame
-        display.initOptions(qualities, $("#downloadBtnInfo"));
+		// Initialise the options & add it to the frame
+		display.initOptions(qualities, $("#downloadBtnInfo"));
 
-        // Update the display (fetch sizes as well)
-        display.update();
-    });
+		// Update the display (fetch sizes as well)
+		display.update();
+	});
 }
 
 // Adds events to the window
 function AddEvents() {
-    var _this = this;
+	var _this = this;
 
-    // Call the function on page change
-    this.lastURL = window.location.href;
-    setInterval(function() {
-        var newURL = window.location.href;
-        if (newURL !== _this.lastURL) {
-            _this.lastURL = newURL;
-            $(window).ready(function() {
-                Program();
-            });
-        }
-    }, 200);
+	// Call the function on page change
+	this.lastURL = window.location.href;
+	setInterval(function() {
+		var newURL = window.location.href;
+		if (newURL !== _this.lastURL) {
+			_this.lastURL = newURL;
+			$(window).ready(function() {
+				Program();
+			});
+		}
+	}, 200);
 
-    $(document).on("click", "#downloadBtn", function() {
-        // Ensure that the button is ENABLED
-        if (!$(this).hasClass("disabled")) {
-            var $span = $("#downloadBtnInfo span:eq(0)");
-            $(this).toggleState();
-            download.getVid($span);
-        }
-    });
+	$(document).on("click", "#downloadBtn", function() {
+		// Ensure that the button is ENABLED
+		if (!$(this).hasClass("disabled")) {
+			var $span = $("#downloadBtnInfo span:eq(0)");
+			$(this).toggleState();
+			download.getVid($span);
+		}
+	});
 
-    // Toggle options on info click
-    $(document).on("click", "#downloadBtnInfo", function() {
-        $("#options").toggle();
-    });
+	// Toggle options on info click
+	$(document).on("click", "#downloadBtnInfo", function() {
+		$("#options").toggle();
+	});
 
-    // Show options on options click
-    $(document).on("click", "#options li", function() {
-        // Close the options
-        $("#options").toggle();
+	// Show options on options click
+	$(document).on("click", "#options li", function() {
+		// Close the options
+		$("#options").toggle();
 
-        // Update the relevant settings
-        global_settings.quality = Number($(this).attr("value"));
-        global_settings.type    = $(this).attr("type");
-        UpdateGlobalSettings();
+		// Update the relevant settings
+		settings.set("quality", Number($(this).attr("value")));
+		settings.set("type",    $(this).attr("type"));
 
-        // Update the info
-        display.updateInfo($(this));
+		// Update the info
+		display.updateInfo($(this));
 
-        // Update the display
-        display.update();
-    });
+		// Update the display
+		display.update();
+	});
 
-    // Hide options on document click
-    $(document).click(function(e) {
-        // If it matches the info or is a child of the top info, ignore
-        $el = $(e.target);
-        $parent = $(e.target).parent();
+	// Hide options on document click
+	$(document).click(function(e) {
+		// If it matches the info or is a child of the top info, ignore
+		$el = $(e.target);
+		$parent = $(e.target).parent();
 
-        var str = $el.attr("id") + $parent.attr("id") + $parent.parent().attr("id");
-        str = str || "";
-        if (str.split("downloadBtnInfo").length > 1) {
-            return;
-        }
+		var str = $el.attr("id") + $parent.attr("id") + $parent.parent().attr("id");
+		str = str || "";
+		if (str.split("downloadBtnInfo").length > 1) {
+			return;
+		}
 
-        // Hide the options
-        $("#options").hide();
-    });
-}
-
-// Global settings handling
-function SetupGlobalSettings() {
-    for (var key in default_setings) {
-        if (default_setings.hasOwnProperty(key)) {
-            if (global_settings[key] === undefined) {
-                global_settings[key] = default_setings[key];
-            }
-        }
-    }
-    UpdateGlobalSettings();
-}
-
-function UpdateGlobalSettings(){
-    localStorage.setObject('global_settings', global_settings);
+		// Hide the options
+		$("#options").hide();
+	});
 }

@@ -3,8 +3,9 @@
 // the size in kb/mb/gb etc on each element
 
 function GetSizes() {
+    // Number of decimal places to represent the
+    // size as
     this.SIZE_DP = 1;
-    // No inherit properties
 }
 
 GetSizes.prototype = {
@@ -19,23 +20,12 @@ GetSizes.prototype = {
             callback($li, size);
         } else {
             // We must make a cross-domain request to determine the size from the return headers...
-            GM_xmlhttpRequest({
+            Ajax.request({
                 method:"HEAD",
                 url:url,
-                onload:function(xhr) {
-                    if (xhr.readyState === 4 && xhr.status === 200) { //If it's okay
-                        size = 0;
-                        if (typeof xhr.getResponseHeader === "function") {
-                            size = xhr.getResponseHeader("Content-length");
-                        } else if (xhr.responseHeaders){
-                            var match = /length: (.*)/.exec(xhr.responseHeaders);
-                            if (match){
-                                size = match[1];
-                            }
-                        }
-
-                        callback($li, size);
-                    }
+                success:function(xhr) {
+                    var size = Ajax.getResponseHeader(xhr, "Content-length");
+                    callback($li, size);
                 }
             });
         }
@@ -53,7 +43,7 @@ GetSizes.prototype = {
         // Default of 0MB
         var returnSize = "0MB";
 
-        for (sizeFormat in sizes){
+        for (var sizeFormat in sizes){
             if (sizes.hasOwnProperty(sizeFormat)) {
                 var minSize = sizes[sizeFormat];
                 if (size > minSize) {
@@ -66,4 +56,4 @@ GetSizes.prototype = {
         // Return the string of return size
         return returnSize;
     }
-}
+};

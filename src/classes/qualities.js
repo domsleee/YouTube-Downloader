@@ -150,7 +150,7 @@ function Qualities() {
 			resolution:2160,
 			type:"webm"
 		},
-	}
+	};
 }
 
 Qualities.prototype = {
@@ -159,13 +159,12 @@ Qualities.prototype = {
 	},
 	initialise: function() {
 		this.reset();
-		var potential = ytplayer.config.args.adaptive_fmts + ytplayer.config.args.url_encoded_fmt_stream_map;
+		var potential = this.getPotential();
 
 		var i = 1;
 		var url = decodeURIComponent(potential.getSetting("url", i));
 		while (url !== "false") {
 			url = url.split(",")[0];
-			var oldURL = url;
 			var s = url.getSetting("s") || potential.getSetting("s", i);
 			url = signature.decryptSignature(url, s);
 			var type = decodeURIComponent(url.getSetting("mime"));
@@ -183,8 +182,8 @@ Qualities.prototype = {
 			var label = this.getLabel(tag);
 
 			// If we have content-length, we can find size IMMEDIATELY
-			if (clen !== "false") {
-				size = parseInt(clen);
+			if (clen) {
+				size = parseInt(clen, 10);
 			}
 
 			// Get the type from the tag
@@ -212,7 +211,6 @@ Qualities.prototype = {
 				dash:tag.dash || false,
 				muted:tag.muted || false,
 				label:label,
-				text:label,
 				audio:tag.url || false,
 				val:val,
 			};
@@ -228,7 +226,7 @@ Qualities.prototype = {
 				});
 
 				this.sizes.getSize($li, function($li, size) {
-					global_properties.audio_size = size;
+					globalProperties.audioSize = size;
 				});
 			}
 
@@ -289,20 +287,61 @@ Qualities.prototype = {
 		var valid = true;
 
 		// If it is muted and we are ignoring muted
-		if (global_settings.ignoreMuted && item.muted) {
+		if (settings.get("ignoreMuted") && item.muted) {
 			valid = false;
 		}
 
 		// If it matches a blacklisted type
-		if (global_settings.ignoreTypes.indexOf(item.type) !== -1) {
+		if (settings.get("ignoreTypes").indexOf(item.type) !== -1) {
 			valid = false;
 		}
 
 		// If it matches a blacklisted value
-		if (global_settings.ignoreVals.indexOf(item.val) !== -1) {
+		if (settings.get("ignoreVals").indexOf(item.val) !== -1) {
 			valid = false;
 		}
 
 		return valid;
+	},
+	// Get potential list
+	getPotential: function() {
+		assert(ytplayer !== undefined, "Ytplayer is undefined!");
+		var potential = ytplayer.config.args.adaptive_fmts + ytplayer.config.args.url_encoded_fmt_stream_map || "";
+		var validBefore = this.checkPotential(potential);
+		potential = potential.replace(/([0-9])s=/g, ",s=");
+		var validAfter = this.checkPotential(potential);
+
+		if (validBefore !== validAfter) {
+			console.log("SOMETHING CHANGED");
+		}
+		
+		return potential;
+	},
+	checkPotential: function(potential) {
+		var lengths = this.getPotentialLengths(potential);
+		var valid = (lengths.url >= lengths.url && lengths.sig > 1);
+
+		// Trace out why it isn't valid
+		if (!valid) {
+			var split = potential.split(",");
+			for (var i = 0; i<split.length; i++) {
+				var splitLengths = this.getPotentialLengths(split[i]);
+				if (splitLengths.url !== 1 || splitLengths.sig !== 1) {
+					console.log("checkPotential");
+					console.log(split[i]);
+					console.log(splitLengths.url, splitLengths,sig);
+				}
+			}
+		}
+
+		// Return if it is valid
+	    return valid;
+	},
+	// Get url and sig lengths from potential list
+	getPotentialLengths: function(potential) {
+		return {
+			url: potential.split("url=").length - 1,
+			sig: decodeURIComponent(potential).split(/(?:(?:&|,|\?|^)s|signature|sig)=/).length - 1
+		};
 	}
 };

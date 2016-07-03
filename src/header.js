@@ -13,5 +13,4 @@
 // @grant        GM_download
 // ==/UserScript==
 
-// Download icon is made by Google at http://www.google.com under Creative Commons 3.0
 // Down arrow selector icon is made by Freepik at http://www.freepik.com under Creative Commons 3.0

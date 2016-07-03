@@ -11,20 +11,18 @@ Signature.prototype = {
         var scriptURL = this.getScriptURL(ytplayer.config.assets.js);
 
         // If it's only positive, it's wrong
-        if (!/,0,|^0,|,0$|\-/.test(global_settings.signature_decrypt)) {
-            global_settings.signature_decrypt = null;
+        if (!/,0,|^0,|,0$|\-/.test(settings.get("signatureCode"))) {
+            settings.set("signatureCode", null);
         }
 
         var _this = this;
         try {
-            GM_xmlhttpRequest({
+            Ajax.request({
                 method:"GET",
                 url:scriptURL,
-                onload:function(response) {
-                    if (response.readyState === 4 && response.status === 200) {
-                        _this.findSignatureCode(response.responseText);
-                        callback();
-                    }
+                success:function(xhr) {
+                    _this.findSignatureCode(xhr.responseText);
+                    callback();
                 }
             });
         } catch(e) { }
@@ -39,7 +37,7 @@ Signature.prototype = {
         return scriptURL;
     },
     isInteger: function(n) {
-        return (typeof n==='number' && n%1==0);
+        return (typeof n === 'number' && n%1 === 0);
     },
     findSignatureCode: function(sourceCode) {
         // Signature function name
@@ -118,7 +116,7 @@ Signature.prototype = {
                 } else if (codeLine.indexOf(',') >= 0) {
                     var swap = this.regMatch(codeLine, methods.swap);
                     swap = parseInt(swap, 10);
-                    assert(this.isInteger(swap) && swap > 0)
+                    assert(this.isInteger(swap) && swap > 0);
                     decodeArray.push(swap);
                 }
             }
@@ -126,9 +124,7 @@ Signature.prototype = {
 
         // Make sure it is a valid signature
         assert(this.isValidSignatureCode(decodeArray));
-
-        global_settings.signature_decrypt = decodeArray;
-        UpdateGlobalSettings();
+        globalProperties.signatureCode = decodeArray;
     },
     isValidSignatureCode: function(arr) {
         var valid = false;
@@ -170,23 +166,6 @@ Signature.prototype = {
         return val;
     },
     decryptSignature: function(url, s) {
-        function swap(a, b) {
-            var c = a[0];
-            a[0] = a[b%a.length];
-            a[b] = c;
-            return a
-        };
-        function decode(sig, arr) { // encoded decryption
-            var sigA = sig.split("");
-            for (var i = 0; i<arr.length; i++) {
-                var act = arr[i];
-                sigA = (act>0)?swap(sigA, act):((act==0)?sigA.reverse():sigA.slice(-act));
-            }
-
-            var result = sigA.join("");
-            return result;
-        }
-
         url = decodeURIComponent(url);
         var sig = url.getSetting("signature") || url.getSetting("sig");
 
@@ -194,7 +173,7 @@ Signature.prototype = {
         // there is an encrypted property (s)
         if (!sig) {
             assert(s !== "false" || !s, "S attribute not found!");
-            sig = decode(s, global_settings.signature_decrypt);
+            sig = this.decodeSignature(s, globalProperties.signatureCode);
             url = url.setSetting("signature", sig);
         }
 
@@ -202,5 +181,31 @@ Signature.prototype = {
         assert(url.getSetting("signature"), "URL does not have signature!");
 
         return url;
+    },
+    decodeSignature: function(s) {
+        var arr = globalProperties.signatureCode;
+        var sigA = s.split("");
+        for (var i = 0; i<arr.length; i++) {
+            var act = arr[i];
+
+            // Determine what sigA should be, based
+            // on polarity of act
+            if (act > 0) {
+                sigA = this.swap(sigA, act);
+            } else if (act === 0) {
+                sigA = sigA.reverse();
+            } else {
+                sigA = sigA.slice(-act);
+            }
+        }
+
+        var result = sigA.join("");
+        return result;
+    },
+    swap: function(a, b) {
+        var c = a[0];
+        a[0] = a[b%a.length];
+        a[b] = c;
+        return a;
     }
 };

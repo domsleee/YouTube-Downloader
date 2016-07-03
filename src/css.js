@@ -112,16 +112,16 @@
         "img": {
             "pointer-events": "none"
         }
-    }
+    };
 
     // Append the CSS to the document
     var node = document.createElement("style");
     var html = "";
-    for (key in css) {
+    for (var key in css) {
         var props = css[key];
 
         html += key + " {\n";
-        for (prop in props) {
+        for (var prop in props) {
             html += "\t" + prop + ":" + props[prop] + ";\n";
         }
 
