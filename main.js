@@ -131,48 +131,6 @@ $.fn.extend({
     },
 });
 
-// src/classes/Ajax.js
-// =================================================
-// Isolates the async functions from the modules
-
-function AjaxClass() {
-}
-
-AjaxClass.prototype = {
-	request: function(params) {
-		// Setup the request
-		var success = params.success;
-		var error   = params.error;
-
-		params.onload = function(xhr) {
-			if (xhr.readyState === 4 && xhr.status === 200) {
-				success(xhr);
-			} else {
-				console.log(xhr);
-				if (typeof error === "function") error(xhr);
-			}
-		}
-
-		// Call the request
-		GM_xmlhttpRequest(params);
-	},
-	getResponseHeader: function(xhr, type) {
-		var value = false;
-		if (typeof xhr.getResponseHeader === "function") {
-			value = xhr.getResponseHeader(type);
-		} else if (xhr.responseHeaders) {
-			var regex = new RegExp(type.split("-")[1]+": (.*)");
-			var match = regex.exec(xhr.responseHeaders);
-			if (match){
-				value = match[1];
-			}
-		}
-
-		// Return the value
-		return value;
-	}
-}
-
 // src/classes/display.js
 // =================================================
 // Generates the display, updates the display, all
@@ -441,94 +399,6 @@ Display.prototype = {
 
         return $tags;
     }
-};
-
-// src/classes/download.js
-// =================================================
-// Functions that are used to download the video and audio
-// files
-
-function Download() {
-	// Construct
-}
-
-Download.prototype = {
-	// Download the file
-	getVid: function($span, title) {
-		var type = $span.attr("type");
-		var dash = ($span.attr("dash") === "true") ? true : false;
-
-		title = title || this.getTitle($span.attr("label"));
-		var name = title;
-		var url = $span.attr("url").setSetting("title", encodeURIComponent(title));
-
-		// Save to disk
-		this.saveToDisk(url, name+"."+type);
-
-		// If it requires audio, download it
-		if (dash) {
-			this.handleAudio(name);
-		}
-
-		// Re-enable the button after 0.5 seconds
-		setTimeout(function() {
-			display.updateDownloadButton("Download");
-		}, 500);
-	},
-	getTitle: function(label) {
-		label = (label) ? label : "";
-		var str = $("title").html().split(" - YouTube")[0].replace(/"|'|\?|:|%/g, "").replace(/\*/g, '-');
-		if (settings.get("label")) str = str+" "+label.toString();
-		str = str.replace(/!|\+|\.|\:|\?|\|/g, "");
-		return str;
-	},
-	// Download audio if required
-	handleAudio: function(name) {
-		// Download the audio file
-		this.getVid($("#options").find("li[type=m4a]"), name+" Audio");
-
-		// Download the script
-
-		/*
-		var os = GetOs();
-		var text = MakeScript(settings.title, type, "m4a", "mp4", os);
-		settings.type = os.scriptType;
-		if (os.os === 'win'){
-			SaveToDisk(URL.createObjectURL(text), settings);
-		} else {
-			SaveToDisk("https://github.com/Domination9987/YouTube-Downloader/raw/master/muxer/Muxer.zip", settings);
-		}*/
-	},
-	getOs: function() {
-		var os = (navigator.appVersion.indexOf("Win") !== -1) ? "win" : "mac";
-		var scriptType = (os === "win") ? "bat" : "command";
-		return {os:os, scriptType:scriptType};
-	},
-	saveToDisk: function(url, name) {
-		console.log("Trying to download:", url);
-		if (typeof(GM_download) === "undefined") {
-			this.fallbackSave(url);
-			alert("Please enable GM_Download if you have videoplayback issues");
-		} else {
-			GM_download(url, name);
-		}
-	},
-
-	// Saves using the old method
-	// NOTE: Does not work for audio or DASH formats
-	//       will download as "videoplayback"
-	fallbackSave: function(url) {
-		var save = document.createElement('a');
-		save.target = "_blank";
-		save.download = true;
-		console.log(decodeURIComponent(url));
-		save.href = url;
-		(document.body || document.documentElement).appendChild(save);
-		save.onclick = function() {
-			(document.body || document.documentElement).removeChild(save);
-		};
-		save.click();
-	}
 };
 
 // src/classes/qualities.js
@@ -901,8 +771,8 @@ GetSizes.prototype = {
             Ajax.request({
                 method:"HEAD",
                 url:url,
-                success:function(xhr) {
-                    var size = Number(Ajax.getResponseHeader(xhr, "Content-length"));
+                success:function(xhr, text, jqXHR) {
+                    var size = Number(Ajax.getResponseHeader(xhr, text, jqXHR, "Content-length"));
                     callback($li, size);
                 }
             });
@@ -1003,8 +873,9 @@ Signature.prototype = {
             Ajax.request({
                 method:"GET",
                 url:scriptURL,
-                success:function(xhr) {
-                    _this.findSignatureCode(xhr.responseText);
+                success:function(xhr, text, jqXHR) {
+                    var text = (typeof(xhr) === "string") ? jqXHR.responseText : xhr.responseText;
+                    _this.findSignatureCode(text);
                     callback();
                 }
             });
@@ -1193,6 +1064,177 @@ Signature.prototype = {
     }
 };
 
+// src/classes/unique/ajaxclass.js
+// =================================================
+// Isolates the async functions from the modules
+
+function AjaxClass() {
+}
+
+AjaxClass.prototype = {
+	request: function(params) {
+		// Setup the request
+		var success = params.success;
+		var error   = params.error;
+
+		params.onload = function(xhr) {
+			if (xhr.readyState === 4 && xhr.status === 200) {
+				success(xhr);
+			} else {
+				console.log(xhr);
+				if (typeof error === "function") error(xhr);
+			}
+		};
+
+		// Call the request
+		GM_xmlhttpRequest(params);
+	},
+	getResponseHeader: function(xhr, text, jqXHR, type) {
+		var value = false;
+		if (typeof xhr.getResponseHeader === "function") {
+			value = xhr.getResponseHeader(type);
+		} else if (xhr.responseHeaders) {
+			var regex = new RegExp(type.split("-")[1]+": (.*)");
+			var match = regex.exec(xhr.responseHeaders);
+			if (match){
+				value = match[1];
+			}
+		}
+
+		// Return the value
+		return value;
+	}
+};
+
+// src/classes/unique/download.js
+// =================================================
+// Functions that are used to download the video and audio
+// files
+
+function Download() {
+	// Construct
+}
+
+Download.prototype = {
+	// Download the file
+	getVid: function($span, title) {
+		var type = $span.attr("type");
+		var dash = ($span.attr("dash") === "true") ? true : false;
+
+		title = title || this.getTitle($span.attr("label"));
+		var name = title;
+		var url = $span.attr("url").setSetting("title", encodeURIComponent(title));
+
+		// Save to disk
+		this.saveToDisk(url, name+"."+type);
+
+		// If it requires audio, download it
+		if (dash) {
+			this.handleAudio(name);
+		}
+
+		// Re-enable the button after 0.5 seconds
+		setTimeout(function() {
+			display.updateDownloadButton("Download");
+		}, 500);
+	},
+	getTitle: function(label) {
+		label = (label) ? label : "";
+		var str = $("title").html().split(" - YouTube")[0].replace(/"|'|\?|:|%/g, "").replace(/\*/g, '-');
+		if (settings.get("label")) str = str+" "+label.toString();
+		str = str.replace(/!|\+|\.|\:|\?|\|/g, "");
+		return str;
+	},
+	// Download audio if required
+	handleAudio: function(name) {
+		// Download the audio file
+		this.getVid($("#options").find("li[type=m4a]"), name+" Audio");
+
+		// Download the script
+
+		/*
+		var os = GetOs();
+		var text = MakeScript(settings.title, type, "m4a", "mp4", os);
+		settings.type = os.scriptType;
+		if (os.os === 'win'){
+			SaveToDisk(URL.createObjectURL(text), settings);
+		} else {
+			SaveToDisk("https://github.com/Domination9987/YouTube-Downloader/raw/master/muxer/Muxer.zip", settings);
+		}*/
+	},
+	getOs: function() {
+		var os = (navigator.appVersion.indexOf("Win") !== -1) ? "win" : "mac";
+		var scriptType = (os === "win") ? "bat" : "command";
+		return {os:os, scriptType:scriptType};
+	},
+	saveToDisk: function(url, name) {
+		console.log("Trying to download:", url);
+		if (typeof(GM_download) === "undefined") {
+			this.fallbackSave(url);
+			alert("Please enable GM_Download if you have videoplayback issues");
+		} else {
+			GM_download(url, name);
+		}
+	},
+
+	// Saves using the old method
+	// NOTE: Does not work for audio or DASH formats
+	//       will download as "videoplayback"
+	fallbackSave: function(url) {
+		var save = document.createElement('a');
+		save.target = "_blank";
+		save.download = true;
+		console.log(decodeURIComponent(url));
+		save.href = url;
+		(document.body || document.documentElement).appendChild(save);
+		save.onclick = function() {
+			(document.body || document.documentElement).removeChild(save);
+		};
+		save.click();
+	}
+};
+
+// src/classes/unique/unsafe.js
+// =================================================
+function Unsafe() {
+	this.id = 0;
+}
+
+Unsafe.prototype = {
+	getVariable: function(name, callback) {
+		var script = "(function() {"+
+			"setTimeout(function(){"+
+				"var event = document.createEvent(\"CustomEvent\");"+
+				"var val = (typeof "+name+" !== 'undefined') ? "+name+" : false;"+
+				"event.initCustomEvent(\""+name+"\", true, true, {\"passback\":JSON.stringify(val)});"+
+				"window.dispatchEvent(event);"+
+			"},100);"+
+		"})()";
+
+		// Inject the script
+		this.injectScript(script, name, function(obj) {
+			var passback = obj.detail.passback || {};
+			callback(JSON.parse(passback));
+		});
+	},	
+
+	injectScript: function(script, name, callback) {
+		//Listen for the script return
+		var myFunc = function(e) {
+			window.removeEventListener(name, myFunc);
+			callback(e);
+		};
+		window.addEventListener(name, myFunc);
+		this.id++;
+
+		//Inject the script
+		var s = document.createElement("script");
+		s.innerText = script;
+		(document.head||document.documentElement).appendChild(s);
+		s.parentNode.removeChild(s);
+	}
+};
+
 // src/css.js
 // =================================================
 // This function adds styling to the page by
@@ -1339,18 +1381,22 @@ var defaultSettings = {         // Default settings
 	ignoreVals:[],              // Ignore values
 	label:true,                 // Have quality label on download
 };
+
+// Volatile properties
 var globalProperties = {
 	audioSize:false,            // Size of audio
 	signatureCode:false         // Obtained signature pattern
 };
 
 // Objects
-var Ajax = new AjaxClass();
+var Ajax      = new AjaxClass();
 var settings  = new Settings(defaultSettings);
 var signature = new Signature();
 var display   = new Display();
 var qualities = new Qualities();
 var download  = new Download();
+var unsafe    = new Unsafe();
+var ytplayer  = {};
 
 // Run the script ONLY if it's on the top
 if (window.top === window) {
@@ -1364,37 +1410,40 @@ function Program() {
 	var url = window.location.href;
 	if (url.indexOf("watch") === -1) return;
 
-	// If the old thing is still there, wait a while
-	ytplayer = ytplayer || {};
-	if ($("#downloadBtn").length > 0 || !ytplayer.config) {
-		setTimeout(Program, 2000);
-		return;
-	}
+	unsafe.getVariable("ytplayer", function(ytp) {
+		// If the old thing is still there, wait a while
+		ytplayer = ytp || {};
+		if ($("#downloadBtn").length > 0 || !ytplayer.config) {
+			console.log(ytplayer !== undefined);
+			setTimeout(Program, 2000);
+			return;
+		}
 
-	// Verify that the potential is LOADED, by comparing the
-	// number of SIGNATURES to the number of URLs
-	var potential = qualities.getPotential();
-	if (!qualities.checkPotential(potential)) {
-		setTimeout(Program, 2000);
-		return;
-	}
+		// Verify that the potential is LOADED, by comparing the
+		// number of SIGNATURES to the number of URLs
+		var potential = qualities.getPotential();
+		if (!qualities.checkPotential(potential)) {
+			setTimeout(Program, 2000);
+			return;
+		}
 
-	// Get the signature (required for decrypting)
-	signature.fetchSignatureScript(function() {
-		// Reset the audio size
-		globalProperties.audioSize = false;
-		qualities.initialise();
-		qualities.sortItems();
+		// Get the signature (required for decrypting)
+		signature.fetchSignatureScript(function() {
+			// Reset the audio size
+			globalProperties.audioSize = false;
+			qualities.initialise();
+			qualities.sortItems();
 
-		// Update the download button, set it to be ENABLED
-		// with text "Download"
-		display.updateDownloadButton("Download");
+			// Update the download button, set it to be ENABLED
+			// with text "Download"
+			display.updateDownloadButton("Download");
 
-		// Initialise the options & add it to the frame
-		display.initOptions(qualities, $("#downloadBtnInfo"));
+			// Initialise the options & add it to the frame
+			display.initOptions(qualities, $("#downloadBtnInfo"));
 
-		// Update the display (fetch sizes as well)
-		display.update();
+			// Update the display (fetch sizes as well)
+			display.update();
+		});
 	});
 }
 
@@ -1459,4 +1508,4 @@ function AddEvents() {
 		// Hide the options
 		$("#options").hide();
 	});
-}
+};

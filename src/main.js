@@ -6,18 +6,22 @@ var defaultSettings = {         // Default settings
 	ignoreVals:[],              // Ignore values
 	label:true,                 // Have quality label on download
 };
+
+// Volatile properties
 var globalProperties = {
 	audioSize:false,            // Size of audio
 	signatureCode:false         // Obtained signature pattern
 };
 
 // Objects
-var Ajax = new AjaxClass();
+var Ajax      = new AjaxClass();
 var settings  = new Settings(defaultSettings);
 var signature = new Signature();
 var display   = new Display();
 var qualities = new Qualities();
 var download  = new Download();
+var unsafe    = new Unsafe();
+var ytplayer  = {};
 
 // Run the script ONLY if it's on the top
 if (window.top === window) {
@@ -31,37 +35,40 @@ function Program() {
 	var url = window.location.href;
 	if (url.indexOf("watch") === -1) return;
 
-	// If the old thing is still there, wait a while
-	ytplayer = ytplayer || {};
-	if ($("#downloadBtn").length > 0 || !ytplayer.config) {
-		setTimeout(Program, 2000);
-		return;
-	}
+	unsafe.getVariable("ytplayer", function(ytp) {
+		// If the old thing is still there, wait a while
+		ytplayer = ytp || {};
+		if ($("#downloadBtn").length > 0 || !ytplayer.config) {
+			console.log(ytplayer !== undefined);
+			setTimeout(Program, 2000);
+			return;
+		}
 
-	// Verify that the potential is LOADED, by comparing the
-	// number of SIGNATURES to the number of URLs
-	var potential = qualities.getPotential();
-	if (!qualities.checkPotential(potential)) {
-		setTimeout(Program, 2000);
-		return;
-	}
+		// Verify that the potential is LOADED, by comparing the
+		// number of SIGNATURES to the number of URLs
+		var potential = qualities.getPotential();
+		if (!qualities.checkPotential(potential)) {
+			setTimeout(Program, 2000);
+			return;
+		}
 
-	// Get the signature (required for decrypting)
-	signature.fetchSignatureScript(function() {
-		// Reset the audio size
-		globalProperties.audioSize = false;
-		qualities.initialise();
-		qualities.sortItems();
+		// Get the signature (required for decrypting)
+		signature.fetchSignatureScript(function() {
+			// Reset the audio size
+			globalProperties.audioSize = false;
+			qualities.initialise();
+			qualities.sortItems();
 
-		// Update the download button, set it to be ENABLED
-		// with text "Download"
-		display.updateDownloadButton("Download");
+			// Update the download button, set it to be ENABLED
+			// with text "Download"
+			display.updateDownloadButton("Download");
 
-		// Initialise the options & add it to the frame
-		display.initOptions(qualities, $("#downloadBtnInfo"));
+			// Initialise the options & add it to the frame
+			display.initOptions(qualities, $("#downloadBtnInfo"));
 
-		// Update the display (fetch sizes as well)
-		display.update();
+			// Update the display (fetch sizes as well)
+			display.update();
+		});
 	});
 }
 
@@ -126,4 +133,4 @@ function AddEvents() {
 		// Hide the options
 		$("#options").hide();
 	});
-}
+};

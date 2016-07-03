@@ -20,8 +20,9 @@ Signature.prototype = {
             Ajax.request({
                 method:"GET",
                 url:scriptURL,
-                success:function(xhr) {
-                    _this.findSignatureCode(xhr.responseText);
+                success:function(xhr, text, jqXHR) {
+                    var text = (typeof(xhr) === "string") ? jqXHR.responseText : xhr.responseText;
+                    _this.findSignatureCode(text);
                     callback();
                 }
             });

@@ -16,12 +16,12 @@ AjaxClass.prototype = {
 				console.log(xhr);
 				if (typeof error === "function") error(xhr);
 			}
-		}
+		};
 
 		// Call the request
 		GM_xmlhttpRequest(params);
 	},
-	getResponseHeader: function(xhr, type) {
+	getResponseHeader: function(xhr, text, jqXHR, type) {
 		var value = false;
 		if (typeof xhr.getResponseHeader === "function") {
 			value = xhr.getResponseHeader(type);
@@ -36,4 +36,4 @@ AjaxClass.prototype = {
 		// Return the value
 		return value;
 	}
-}
+};
