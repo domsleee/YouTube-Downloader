@@ -19,7 +19,7 @@ String.prototype.getSetting = function(setting, index) {
     var regex = new RegExp("(?:\\?|&|^|,)"+setting+"=([^&|,]*)", "g");
     var split = this.split(regex);
     if (split.length > index) {
-        val = split[index];
+        val = split[index].split(",")[0];
     }
 
     return val;

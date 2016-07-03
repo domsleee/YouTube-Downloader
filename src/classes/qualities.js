@@ -160,17 +160,20 @@ Qualities.prototype = {
 	initialise: function() {
 		this.reset();
 		var potential = this.getPotential();
+		var split     = potential.split(",");
 
-		var i = 1;
-		var url = decodeURIComponent(potential.getSetting("url", i));
-		while (url !== "false") {
-			url = url.split(",")[0];
-			var s = url.getSetting("s") || potential.getSetting("s", i);
-			url = signature.decryptSignature(url, s);
+		for (var i = 0; i<split.length; i++) {
+			// Get relevant properties
+			var sect = split[i];
+			var url  = decodeURIComponent(sect.getSetting("url"));
+			var s    = sect.getSetting("s");
 			var type = decodeURIComponent(url.getSetting("mime"));
-			var clen = url.getSetting("clen") || potential.getSetting("clen", i);
+			var clen = url.getSetting("clen") || sect.getSetting("clen");
 			var itag = parseInt(url.getSetting("itag"), 10);
 			var size = false;
+
+			// Decode the url
+			url = signature.decryptSignature(url, s);
 
 			// Get data from the ITAG identifier
 			var tag = this.itags[itag] || {};
@@ -229,10 +232,6 @@ Qualities.prototype = {
 					globalProperties.audioSize = size;
 				});
 			}
-
-			// Move on to the next item
-			i++;
-			url = decodeURIComponent(potential.getSetting("url", i));
 		}
 	},
 	getLabel: function(tag) {
@@ -254,7 +253,7 @@ Qualities.prototype = {
 		var val = tag.resolution || 0;
 
 		// Multiply if it has an fps tag (high frame rate)
-		if (tag.fps >= 30) {
+		if (tag.dash) {
 			val *= 100;
 		}
 
@@ -306,15 +305,9 @@ Qualities.prototype = {
 	// Get potential list
 	getPotential: function() {
 		assert(ytplayer !== undefined, "Ytplayer is undefined!");
-		var potential = ytplayer.config.args.adaptive_fmts + ytplayer.config.args.url_encoded_fmt_stream_map || "";
-		var validBefore = this.checkPotential(potential);
+		var potential = ytplayer.config.args.adaptive_fmts + "," + ytplayer.config.args.url_encoded_fmt_stream_map || "";
 		potential = potential.replace(/([0-9])s=/g, ",s=");
-		var validAfter = this.checkPotential(potential);
 
-		if (validBefore !== validAfter) {
-			console.log("SOMETHING CHANGED");
-		}
-		
 		return potential;
 	},
 	checkPotential: function(potential) {

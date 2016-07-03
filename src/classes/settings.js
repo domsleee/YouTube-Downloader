@@ -8,7 +8,7 @@ function Settings(defaultSettings) {
 	// Set the default settings
 	for (var key in defaultSettings) {
 		if (defaultSettings.hasOwnProperty(key)) {
-			if (this.settings[key] === undefined) {
+			if (this.settings[key] === undefined || true) {
 				this.settings[key] = defaultSettings[key];
 			}
 		}

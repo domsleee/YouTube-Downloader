@@ -3,7 +3,7 @@ var defaultSettings = {         // Default settings
 	quality:7200000,            // Quality selected (720p60)
 	ignoreMuted:true,           // Ignore muted
 	ignoreTypes:["webm"],       // Ignore webm types (muxing doesn't work atm)
-	ignoreVals:[18, 22],        // Ignore values
+	ignoreVals:[],              // Ignore values
 	label:true,                 // Have quality label on download
 };
 var globalProperties = {

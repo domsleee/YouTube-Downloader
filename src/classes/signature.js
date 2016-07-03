@@ -172,7 +172,7 @@ Signature.prototype = {
         // Decryption is only required if signature is non-existant AND
         // there is an encrypted property (s)
         if (!sig) {
-            assert(s !== "false" || !s, "S attribute not found!");
+            assert(s !== "false" && s, "S attribute not found!");
             sig = this.decodeSignature(s, globalProperties.signatureCode);
             url = url.setSetting("signature", sig);
         }
