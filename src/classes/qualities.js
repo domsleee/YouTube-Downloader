@@ -220,6 +220,7 @@ Qualities.prototype = {
 			if (this.checkValid(item)) {
 				this.items.push(item);
 			}
+			this.checkMP3(item);
 
 			// If it is the audio url - find the size and update
 			if (tag.type === "m4a" && tag.audio) {
@@ -336,5 +337,20 @@ Qualities.prototype = {
 			url: potential.split("url=").length - 1,
 			sig: decodeURIComponent(potential).split(/(?:(?:&|,|\?|^)s|signature|sig)=/).length - 1
 		};
+	},
+
+	// Check if MP3 should be added
+	checkMP3: function(item) {
+		if (item.type === "m4a") {
+			// Copy over the properties into
+			// a new object
+			var newItem = {};
+			for (var key in item) {
+				newItem[key] = item[key];
+			}
+
+			newItem.type = "mp3";
+			this.items.push(newItem);
+		}
 	}
 };

@@ -15,6 +15,12 @@ Download.prototype = {
 		var name = title;
 		var url = $span.attr("url").setSetting("title", encodeURIComponent(title));
 
+		// MP3 change
+        if (type === "mp3") {
+            name = "MP3 - "+name;
+            type = "m4a";
+        }
+
 		// Save to disk
 		this.saveToDisk(url, name+"."+type);
 
@@ -38,7 +44,7 @@ Download.prototype = {
 	// Download audio if required
 	handleAudio: function(name) {
 		// Download the audio file
-		this.getVid($("#options").find("li[type=m4a]"), name+" Audio");
+		this.getVid($("#options").find("li[type=m4a]"), "AUDIO - " + name);
 
 		// Download the script
 

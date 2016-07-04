@@ -625,6 +625,7 @@ Qualities.prototype = {
 			if (this.checkValid(item)) {
 				this.items.push(item);
 			}
+			this.checkMP3(item);
 
 			// If it is the audio url - find the size and update
 			if (tag.type === "m4a" && tag.audio) {
@@ -741,6 +742,21 @@ Qualities.prototype = {
 			url: potential.split("url=").length - 1,
 			sig: decodeURIComponent(potential).split(/(?:(?:&|,|\?|^)s|signature|sig)=/).length - 1
 		};
+	},
+
+	// Check if MP3 should be added
+	checkMP3: function(item) {
+		if (item.type === "m4a") {
+			// Copy over the properties into
+			// a new object
+			var newItem = {};
+			for (var key in item) {
+				newItem[key] = item[key];
+			}
+
+			newItem.type = "mp3";
+			this.items.push(newItem);
+		}
 	}
 };
 
@@ -1125,6 +1141,12 @@ Download.prototype = {
 		var name = title;
 		var url = $span.attr("url").setSetting("title", encodeURIComponent(title));
 
+		// MP3 change
+        if (type === "mp3") {
+            name = "MP3 - "+name;
+            type = "m4a";
+        }
+
 		// Save to disk
 		this.saveToDisk(url, name+"."+type);
 
@@ -1148,7 +1170,7 @@ Download.prototype = {
 	// Download audio if required
 	handleAudio: function(name) {
 		// Download the audio file
-		this.getVid($("#options").find("li[type=m4a]"), name+" Audio");
+		this.getVid($("#options").find("li[type=m4a]"), "AUDIO - " + name);
 
 		// Download the script
 
