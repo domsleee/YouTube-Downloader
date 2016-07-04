@@ -448,7 +448,7 @@ function Qualities() {
 		135: {
 			resolution:480,
 			type:"mp4",
-			muted:true
+			dash:true
 		},
 		136: {
 			resolution:720,
@@ -658,8 +658,8 @@ Qualities.prototype = {
 		var val = tag.resolution || 0;
 
 		// Multiply if it has an fps tag (high frame rate)
-		if (tag.dash) {
-			val *= 100;
+		if (tag.fps >= 30) {
+			val += 10;
 		}
 
 		// Multiply if it is mp4
@@ -1140,9 +1140,9 @@ Download.prototype = {
 	},
 	getTitle: function(label) {
 		label = (label) ? label : "";
-		var str = $("title").html().split(" - YouTube")[0].replace(/"|'|\?|:|%/g, "").replace(/\*/g, '-');
+		var str = $("title").html().split(" - YouTube")[0];
 		if (settings.get("label")) str = str+" "+label.toString();
-		str = str.replace(/!|\+|\.|\:|\?|\|/g, "");
+		str = str.replace(/!|\+|\.|\:|\?|\||\\|\//g, "");
 		return str;
 	},
 	// Download audio if required

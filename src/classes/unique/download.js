@@ -30,9 +30,9 @@ Download.prototype = {
 	},
 	getTitle: function(label) {
 		label = (label) ? label : "";
-		var str = $("title").html().split(" - YouTube")[0].replace(/"|'|\?|:|%/g, "").replace(/\*/g, '-');
+		var str = $("title").html().split(" - YouTube")[0];
 		if (settings.get("label")) str = str+" "+label.toString();
-		str = str.replace(/!|\+|\.|\:|\?|\|/g, "");
+		str = str.replace(/!|\+|\.|\:|\?|\||\\|\//g, "");
 		return str;
 	},
 	// Download audio if required

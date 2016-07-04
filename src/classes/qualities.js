@@ -43,7 +43,7 @@ function Qualities() {
 		135: {
 			resolution:480,
 			type:"mp4",
-			muted:true
+			dash:true
 		},
 		136: {
 			resolution:720,
@@ -253,8 +253,8 @@ Qualities.prototype = {
 		var val = tag.resolution || 0;
 
 		// Multiply if it has an fps tag (high frame rate)
-		if (tag.dash) {
-			val *= 100;
+		if (tag.fps >= 30) {
+			val += 10;
 		}
 
 		// Multiply if it is mp4
