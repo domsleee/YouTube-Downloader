@@ -37,7 +37,12 @@ Download.prototype = {
 	getTitle: function(label) {
 		label = (label) ? label : "";
 		var str = $("title").html().split(" - YouTube")[0];
-		if (settings.get("label")) str = str+" "+label.toString();
+
+		// Add the label if required
+		if (settings.get("label") && label.toString() !== "Audio") {
+			str += " " + label.toString();
+		}
+
 		str = str.replace(/!|\+|\.|\:|\?|\||\\|\//g, "");
 		return str;
 	},
