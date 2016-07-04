@@ -16,10 +16,10 @@ Download.prototype = {
 		var url = $span.attr("url").setSetting("title", encodeURIComponent(title));
 
 		// MP3 change
-        if (type === "mp3") {
-            name = "MP3 - "+name;
-            type = "m4a";
-        }
+		if (type === "mp3") {
+			name = "MP3 - "+name;
+			type = "m4a";
+		}
 
 		// Save to disk
 		this.saveToDisk(url, name+"."+type);
