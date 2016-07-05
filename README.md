@@ -1,7 +1,7 @@
 # YouTube Downloader
 This is a userscript that allows the user to download any streamable YouTube video in selected formats. [Conversion](https://github.com/Domination9987/YouTube-Downloader/wiki/2.-Conversion) of video-only streams + audio -> video and audio -> mp3 are supported on [Windows](https://github.com/Domination9987/YouTube-Downloader/wiki/2.-Conversion#windows), [Mac](https://github.com/Domination9987/YouTube-Downloader/wiki/2.-Conversion#mac) and [Linux](https://github.com/Domination9987/YouTube-Downloader/wiki/2.-Conversion#linux), using the `ffmpeg` library. More information can be found in the [wiki](https://github.com/Domination9987/YouTube-Downloader/wiki/)
 
-<img src="https://raw.githubusercontent.com/Domination9987/YouTube-Downloader/master/screenshots/qualities.png" alt="Quality Image"> 
+<img src="https://raw.githubusercontent.com/Domination9987/YouTube-Downloader/master/screenshots/qualities.png" alt="Quality Image" style="width:220px"> 
 
 ## Contents
 1. [Download Formats](#download-formats)
