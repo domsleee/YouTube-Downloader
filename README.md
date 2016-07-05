@@ -12,7 +12,7 @@ This is a userscript that allows the user to download any streamable YouTube vid
 ## Download Formats
 Some of the qualities available for any given YouTube video are **video only**. This is due to YouTube storing some of the qualities - including 480p, 720p60, 1080p and 1080p60 - as video only (DASH), and playing it back synchronously with a separate m4a audio stream.
 
-Because of this, to download these videos, **both** the video stream (`*.m4v`) **and** audio stream (`*.m4a`) must be downloaded, and then remuxed into a single mp4 video after they have downloaded. Further notes on this can be found in the wiki.
+Because of this, to download these videos, **both** the video stream (`*.m4v`) **and** audio stream (`*.m4a`) must be downloaded, and then remuxed into a single mp4 video after they have downloaded. Further notes on this can be found in the [wiki](https://github.com/Domination9987/YouTube-Downloader/wiki/2.-Conversion/).
 ## Installation
 ### If you use Chrome:
 1. Download the chrome extension here
