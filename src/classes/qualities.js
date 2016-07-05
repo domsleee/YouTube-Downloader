@@ -23,7 +23,7 @@ function Qualities() {
 			type:"mp4"
 		},
 		36: {
-			resolution:240,
+			resolution:180,
 			type:"3gpp"
 		},
 		43: {
@@ -33,7 +33,7 @@ function Qualities() {
 		133: {
 			resolution:240,
 			type:"mp4",
-			muted:true,
+			dash:true
 		},
 		134: {
 			resolution:360,
@@ -182,7 +182,7 @@ Qualities.prototype = {
 			var val = this.getVal(tag);
 
 			// Get the label from the tag
-			var label = this.getLabel(tag);
+			var label = sect.getSetting("quality_label") || this.getLabel(tag);
 
 			// If we have content-length, we can find size IMMEDIATELY
 			if (clen) {
