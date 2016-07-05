@@ -39,5 +39,5 @@ The functionality is pretty self explanatory - the script will allow the user to
 
 ### To be added
 + Filtering types and qualities
-+ Downloading embedded files
++ Interfacing videos embedded on external sites
 + Mass downloading (e.g. playlists)

@@ -58,17 +58,19 @@ Display.prototype = {
 		for (i = 0; i<qualities.items.length; i++) {
 			var quality = qualities.items[i];
 			var display = (quality.hidden) ? "none" : "inherit";
+
 			$li = $("<li>", {
-				html:quality.label,
-				value:quality.val,
-				url:quality.url,
-				type:quality.type,
-				label:quality.label,
-				style:"display:"+display,
-				dash:quality.dash,
-				muted:quality.muted,
-				mp3:quality.mp3,
-				size:quality.size
+				html  : quality.label,
+				value : quality.value,
+				url   : quality.url,
+				type  : quality.type,
+				label : quality.label,
+				hidden: quality.hidden,
+				style : "display:"+display,
+				dash  : quality.dash,
+				muted : quality.muted,
+				mp3   : quality.mp3,
+				size  : quality.size
 			});
 
 			// Tags - get them and then append them to the $li
@@ -84,9 +86,9 @@ Display.prototype = {
 			if (!$topEl) $topEl = $li;
 
 			// If it matches the set quality, assign it to the info box
-			var sameQuality = (Number($li.attr("value")) === settings.get("quality"));
-			var sameType    = ($li.attr("type") === settings.get("type"));
-			if (sameQuality && sameType) {
+			var sameQuality = (Number($li.attr("value")) === Number(localStorage.selQuality));
+			var visible     = !$li.attr("hidden");
+			if (sameQuality && visible) {
 				$topEl = $li;
 			}
 		}
@@ -104,7 +106,7 @@ Display.prototype = {
 		var sizes = qualities.sizes;
 
 		// Attempt to obtain the size from the qualities values
-		var matchedQualities = qualities.items.listMatches("val", $li.attr("value"));
+		var matchedQualities = qualities.items.listMatches("value", $li.attr("value"));
 		if (matchedQualities.length > 0) {
 			matchedQualities[0].size = size;
 		}

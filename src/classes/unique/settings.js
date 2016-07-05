@@ -3,26 +3,17 @@
 
 function Settings(defaultSettings) {
 	// Fetch the settings from localStorage
-	this.settings = localStorage.getObject("globalSettings") || {};
+	this.settings = {};
 
 	// Set the default settings
 	for (var key in defaultSettings) {
 		if (defaultSettings.hasOwnProperty(key)) {
-			if (this.settings[key] === undefined || true) {
-				this.settings[key] = defaultSettings[key];
-			}
+			this.settings[key] = defaultSettings[key];
 		}
 	}
-
-	// Update in localStorage
-	this.update();
 }
 
 Settings.prototype = {
-	// Update the settings
-	update: function() {
-		localStorage.setObject("globalSettings", this.settings);
-	},
 	// Get the value of a property
 	get: function(key) {
 		var value = this.settings[key];
@@ -34,7 +25,6 @@ Settings.prototype = {
 	},
 	// Set a new property
 	set: function(key, value) {
-		this.settings[key] = JSON.stringify(value);
-		this.update();
+		this.settings[key] = value;
 	}
 };

@@ -13,7 +13,7 @@ GetSizes.prototype = {
 		var url = $li.attr("url");
 
 		// Attempt to obtain the size from the qualities values
-		var matchedQualities = qualities.items.listMatches("val", $li.attr("value"));
+		var matchedQualities = qualities.items.listMatches("value", $li.attr("value"));
 		var size = (matchedQualities.length > 0) ? matchedQualities[0].size : false;
 
 		if (size) {

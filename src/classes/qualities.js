@@ -207,18 +207,25 @@ Qualities.prototype = {
 
 			// Append to qualities (if it shouldn't be ignored)
 			var item = {
-				itag:itag,
-				url:url,
-				size:size,
-				type:tag.type,
-				dash:tag.dash || false,
-				muted:tag.muted || false,
-				label:label,
-				audio:tag.url || false,
-				val:val,
+				itag : itag,
+				url  : url,
+				size : size,
+				type : tag.type,
+				dash : tag.dash || false,
+				muted: tag.muted || false,
+				label: label,
+				audio: tag.url || false,
+				value: val,
 			};
 			if (this.checkValid(item)) {
 				this.items.push(item);
+
+			// Check if it should be added but HIDDEN
+			} else {
+				if (item.type === "m4a") {
+					item.hidden = true;
+					this.items.push(item);
+				}
 			}
 			this.checkMP3(item);
 
@@ -269,6 +276,10 @@ Qualities.prototype = {
 			val *= -1;
 		}
 
+		if (tag.type === "mp3") {
+			val -= 1;
+		}
+
 		return val;
 	},
 
@@ -277,9 +288,9 @@ Qualities.prototype = {
 		this.items.sort(_this.sortDescending);
 	},
 	sortDescending: function(a, b) {
-		if (isNaN(a.val)) a.val = 0;
-		if (isNaN(b.val)) b.val = 0;
-		return Number(b.val) - Number(a.val);
+		if (isNaN(a.value)) a.value = 0;
+		if (isNaN(b.value)) b.value = 0;
+		return Number(b.value) - Number(a.value);
 	},
 
 	// Check if the item should be ignored or not
@@ -297,7 +308,7 @@ Qualities.prototype = {
 		}
 
 		// If it matches a blacklisted value
-		if (settings.get("ignoreVals").indexOf(item.val) !== -1) {
+		if (settings.get("ignoreVals").indexOf(item.value) !== -1) {
 			valid = false;
 		}
 

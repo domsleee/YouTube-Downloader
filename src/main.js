@@ -1,16 +1,29 @@
 // Variables
-var defaultSettings = {         // Default settings
-	quality:7200000,            // Quality selected (720p60)
-	ignoreMuted:true,           // Ignore muted
-	ignoreTypes:["webm"],       // Ignore webm types (muxing doesn't work atm)
-	ignoreVals:[],              // Ignore values
-	label:true,                 // Have quality label on download
+// Selected quality
+localStorage.selQuality = localStorage.selQuality || 7200000;
+
+// Default settings
+var defaultSettings = {
+	// Ignore muted
+	ignoreMuted:true,
+	
+	// Types that are ignored
+	ignoreTypes:["webm"],
+
+	// Values that are ignored
+	ignoreVals:[],
+
+	// Have quality label on download
+	label:true,                 
 };
 
 // Volatile properties
 var globalProperties = {
-	audioSize:false,            // Size of audio
-	signatureCode:false         // Obtained signature pattern
+	// Size of audio
+	audioSize:false,
+
+	// Obtained signature pattern
+	signatureCode:false
 };
 
 // Objects
@@ -88,6 +101,7 @@ function AddEvents() {
 		}
 	}, 200);
 
+	// On download button click
 	$(document).on("click", "#downloadBtn", function() {
 		// Ensure that the button is ENABLED
 		if (!$(this).hasClass("disabled")) {
@@ -102,14 +116,13 @@ function AddEvents() {
 		$("#options").toggle();
 	});
 
-	// Show options on options click
+	// On individual option click
 	$(document).on("click", "#options li", function() {
 		// Close the options
-		$("#options").toggle();
+		$("#options").hide();
 
 		// Update the relevant settings
-		settings.set("quality", Number($(this).attr("value")));
-		settings.set("type",    $(this).attr("type"));
+		localStorage.selQuality = Number($(this).attr("value"));
 
 		// Update the info
 		display.updateInfo($(this));

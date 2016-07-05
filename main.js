@@ -193,17 +193,19 @@ Display.prototype = {
 		for (i = 0; i<qualities.items.length; i++) {
 			var quality = qualities.items[i];
 			var display = (quality.hidden) ? "none" : "inherit";
+
 			$li = $("<li>", {
-				html:quality.label,
-				value:quality.val,
-				url:quality.url,
-				type:quality.type,
-				label:quality.label,
-				style:"display:"+display,
-				dash:quality.dash,
-				muted:quality.muted,
-				mp3:quality.mp3,
-				size:quality.size
+				html  : quality.label,
+				value : quality.value,
+				url   : quality.url,
+				type  : quality.type,
+				label : quality.label,
+				hidden: quality.hidden,
+				style : "display:"+display,
+				dash  : quality.dash,
+				muted : quality.muted,
+				mp3   : quality.mp3,
+				size  : quality.size
 			});
 
 			// Tags - get them and then append them to the $li
@@ -219,9 +221,9 @@ Display.prototype = {
 			if (!$topEl) $topEl = $li;
 
 			// If it matches the set quality, assign it to the info box
-			var sameQuality = (Number($li.attr("value")) === settings.get("quality"));
-			var sameType    = ($li.attr("type") === settings.get("type"));
-			if (sameQuality && sameType) {
+			var sameQuality = (Number($li.attr("value")) === Number(localStorage.selQuality));
+			var visible     = !$li.attr("hidden");
+			if (sameQuality && visible) {
 				$topEl = $li;
 			}
 		}
@@ -239,7 +241,7 @@ Display.prototype = {
 		var sizes = qualities.sizes;
 
 		// Attempt to obtain the size from the qualities values
-		var matchedQualities = qualities.items.listMatches("val", $li.attr("value"));
+		var matchedQualities = qualities.items.listMatches("value", $li.attr("value"));
 		if (matchedQualities.length > 0) {
 			matchedQualities[0].size = size;
 		}
@@ -612,18 +614,25 @@ Qualities.prototype = {
 
 			// Append to qualities (if it shouldn't be ignored)
 			var item = {
-				itag:itag,
-				url:url,
-				size:size,
-				type:tag.type,
-				dash:tag.dash || false,
-				muted:tag.muted || false,
-				label:label,
-				audio:tag.url || false,
-				val:val,
+				itag : itag,
+				url  : url,
+				size : size,
+				type : tag.type,
+				dash : tag.dash || false,
+				muted: tag.muted || false,
+				label: label,
+				audio: tag.url || false,
+				value: val,
 			};
 			if (this.checkValid(item)) {
 				this.items.push(item);
+
+			// Check if it should be added but HIDDEN
+			} else {
+				if (item.type === "m4a") {
+					item.hidden = true;
+					this.items.push(item);
+				}
 			}
 			this.checkMP3(item);
 
@@ -674,6 +683,10 @@ Qualities.prototype = {
 			val *= -1;
 		}
 
+		if (tag.type === "mp3") {
+			val -= 1;
+		}
+
 		return val;
 	},
 
@@ -682,9 +695,9 @@ Qualities.prototype = {
 		this.items.sort(_this.sortDescending);
 	},
 	sortDescending: function(a, b) {
-		if (isNaN(a.val)) a.val = 0;
-		if (isNaN(b.val)) b.val = 0;
-		return Number(b.val) - Number(a.val);
+		if (isNaN(a.value)) a.value = 0;
+		if (isNaN(b.value)) b.value = 0;
+		return Number(b.value) - Number(a.value);
 	},
 
 	// Check if the item should be ignored or not
@@ -702,7 +715,7 @@ Qualities.prototype = {
 		}
 
 		// If it matches a blacklisted value
-		if (settings.get("ignoreVals").indexOf(item.val) !== -1) {
+		if (settings.get("ignoreVals").indexOf(item.value) !== -1) {
 			valid = false;
 		}
 
@@ -777,7 +790,7 @@ GetSizes.prototype = {
 		var url = $li.attr("url");
 
 		// Attempt to obtain the size from the qualities values
-		var matchedQualities = qualities.items.listMatches("val", $li.attr("value"));
+		var matchedQualities = qualities.items.listMatches("value", $li.attr("value"));
 		var size = (matchedQualities.length > 0) ? matchedQualities[0].size : false;
 
 		if (size) {
@@ -819,49 +832,6 @@ GetSizes.prototype = {
 
 		// Return the string of return size
 		return returnSize;
-	}
-};
-
-// src/classes/settings.js
-// =================================================
-// This class handles the settings
-// Uses localStorage to remember the settings
-
-function Settings(defaultSettings) {
-	// Fetch the settings from localStorage
-	this.settings = localStorage.getObject("globalSettings") || {};
-
-	// Set the default settings
-	for (var key in defaultSettings) {
-		if (defaultSettings.hasOwnProperty(key)) {
-			if (this.settings[key] === undefined || true) {
-				this.settings[key] = defaultSettings[key];
-			}
-		}
-	}
-
-	// Update in localStorage
-	this.update();
-}
-
-Settings.prototype = {
-	// Update the settings
-	update: function() {
-		localStorage.setObject("globalSettings", this.settings);
-	},
-	// Get the value of a property
-	get: function(key) {
-		var value = this.settings[key];
-		if (Number(value) === value) {
-			value = Number(value);
-		}
-
-		return value;
-	},
-	// Set a new property
-	set: function(key, value) {
-		this.settings[key] = JSON.stringify(value);
-		this.update();
 	}
 };
 
@@ -1221,6 +1191,39 @@ Download.prototype = {
 	}
 };
 
+// src/classes/unique/settings.js
+// =================================================
+// This class handles the settings
+// Uses localStorage to remember the settings
+
+function Settings(defaultSettings) {
+	// Fetch the settings from localStorage
+	this.settings = {};
+
+	// Set the default settings
+	for (var key in defaultSettings) {
+		if (defaultSettings.hasOwnProperty(key)) {
+			this.settings[key] = defaultSettings[key];
+		}
+	}
+}
+
+Settings.prototype = {
+	// Get the value of a property
+	get: function(key) {
+		var value = this.settings[key];
+		if (Number(value) === value) {
+			value = Number(value);
+		}
+
+		return value;
+	},
+	// Set a new property
+	set: function(key, value) {
+		this.settings[key] = value;
+	}
+};
+
 // src/classes/unique/unsafe.js
 // =================================================
 function Unsafe() {
@@ -1401,18 +1404,31 @@ Unsafe.prototype = {
 // src/main.js
 // =================================================
 // Variables
-var defaultSettings = {         // Default settings
-	quality:7200000,            // Quality selected (720p60)
-	ignoreMuted:true,           // Ignore muted
-	ignoreTypes:["webm"],       // Ignore webm types (muxing doesn't work atm)
-	ignoreVals:[],              // Ignore values
-	label:true,                 // Have quality label on download
+// Selected quality
+localStorage.selQuality = localStorage.selQuality || 7200000;
+
+// Default settings
+var defaultSettings = {
+	// Ignore muted
+	ignoreMuted:true,
+	
+	// Types that are ignored
+	ignoreTypes:["webm"],
+
+	// Values that are ignored
+	ignoreVals:[],
+
+	// Have quality label on download
+	label:true,                 
 };
 
 // Volatile properties
 var globalProperties = {
-	audioSize:false,            // Size of audio
-	signatureCode:false         // Obtained signature pattern
+	// Size of audio
+	audioSize:false,
+
+	// Obtained signature pattern
+	signatureCode:false
 };
 
 // Objects
@@ -1490,6 +1506,7 @@ function AddEvents() {
 		}
 	}, 200);
 
+	// On download button click
 	$(document).on("click", "#downloadBtn", function() {
 		// Ensure that the button is ENABLED
 		if (!$(this).hasClass("disabled")) {
@@ -1504,14 +1521,13 @@ function AddEvents() {
 		$("#options").toggle();
 	});
 
-	// Show options on options click
+	// On individual option click
 	$(document).on("click", "#options li", function() {
 		// Close the options
-		$("#options").toggle();
+		$("#options").hide();
 
 		// Update the relevant settings
-		settings.set("quality", Number($(this).attr("value")));
-		settings.set("type",    $(this).attr("type"));
+		localStorage.selQuality = Number($(this).attr("value"));
 
 		// Update the info
 		display.updateInfo($(this));
