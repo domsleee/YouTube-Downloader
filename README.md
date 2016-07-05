@@ -16,7 +16,7 @@ Because of this, to download these videos, **both** the video stream (`*.m4v`) *
 ## Installation
 ### If you use Chrome:
 1. Download the chrome extension here
-2. Navigate to [chrome://extensions](chrome://extensions/)
+2. Navigate to <a href="chrome://extensions/">chrome://extensions</a>
 3. Enable "Developer mode" in the top right corner
 4. Drag the aforementioned extension to install
 
