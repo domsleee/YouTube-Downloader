@@ -615,6 +615,7 @@ Qualities.prototype = {
 					this.items.push(item);
 				}
 			}
+
 			this.checkMP3(item);
 
 			// If it is the audio url - find the size and update
@@ -749,6 +750,7 @@ Qualities.prototype = {
 			}
 
 			newItem.type = "mp3";
+			newItem.itag += 1;
 			this.items.push(newItem);
 		}
 	},
@@ -1279,7 +1281,7 @@ Download.prototype = {
 	// Download audio if required
 	handleAudio: function(name) {
 		// Download the audio file
-		this.getVid($("#options").find("li[itag=140]:eq(0)"), "AUDIO - " + name);
+		this.getVid($("#options").find("li[itag=141]:eq(0)"), "AUDIO - " + name);
 
 		// Download the script
 
