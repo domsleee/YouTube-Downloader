@@ -8,12 +8,13 @@ function Download() {
 Download.prototype = {
 	// Download the file
 	getVid: function($span, title) {
-		var type = $span.attr("type");
-		var dash = ($span.attr("dash") === "true") ? true : false;
+		var item = qualities.getFromItag($span.attr("itag"));
+		var type = item.type;
+		var dash = item.dash;
 
-		title = title || this.getTitle($span.attr("label"));
+		title = title || this.getTitle(item.label);
 		var name = title;
-		var url = $span.attr("url").setSetting("title", encodeURIComponent(title));
+		var url = item.url.setSetting("title", encodeURIComponent(title));
 
 		// MP3 change
 		if (type === "mp3") {

@@ -1,6 +1,6 @@
 // Variables
 // Selected quality
-localStorage.selQuality = localStorage.selQuality || 7200000;
+localStorage.selQuality = localStorage.selQuality || 298;
 
 // Default settings
 var defaultSettings = {

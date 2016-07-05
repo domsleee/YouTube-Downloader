@@ -147,13 +147,13 @@ function Display() {
 	// Download icon (with cloud)
 	this.$downloadIcon = $("<img>", {
 		style:"margin-right:4.5px",
-		class:'midalign',
+		class:"midalign",
 		src:"https://raw.githubusercontent.com/Domination9987/YouTube-Downloader/master/graphics/downIconMed.png"
 	});
 	// Down select arrow (for dropdown)
 	this.$downArrow = $("<img>", {
 		style:"margin-left:6px;",
-		class:'midalign',
+		class:"midalign",
 		src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAAV0lEQVQoU2NkIBEwkqiegXQNc+fOTWBkZJxPjE3///9PBNtAjCaQ4uTk5AVwJ+HTBFMMMhzFD9g0ISvG0IDuPHTFWDXANIFokJvRA4P0YCUmOJHVkGwDAPVTKkQsO0MlAAAAAElFTkSuQmCC"
 	});
 }
@@ -187,29 +187,21 @@ Display.prototype = {
 		$options = $("<ul>", {
 			id:"options",
 			class:"unselectable",
-			style:"display:none;position:absolute"
 		});
 
+		// Initialise items in the drop-down list
 		for (i = 0; i<qualities.items.length; i++) {
 			var quality = qualities.items[i];
 			var display = (quality.hidden) ? "none" : "inherit";
 
 			$li = $("<li>", {
 				html  : quality.label,
-				value : quality.value,
-				url   : quality.url,
-				type  : quality.type,
-				label : quality.label,
-				hidden: quality.hidden,
+				itag  : quality.itag,
 				style : "display:"+display,
-				dash  : quality.dash,
-				muted : quality.muted,
-				mp3   : quality.mp3,
-				size  : quality.size
 			});
 
 			// Tags - get them and then append them to the $li
-			$tags = this.getTags($li);
+			$tags = this.getTags(quality);
 			for (var j = 0; j<$tags.length; j++) {
 				$li.append($tags[j]);
 			}
@@ -221,8 +213,8 @@ Display.prototype = {
 			if (!$topEl) $topEl = $li;
 
 			// If it matches the set quality, assign it to the info box
-			var sameQuality = (Number($li.attr("value")) === Number(localStorage.selQuality));
-			var visible     = !$li.attr("hidden");
+			var sameQuality = (quality.itag === Number(localStorage.selQuality));
+			var visible     = !quality.hidden;
 			if (sameQuality && visible) {
 				$topEl = $li;
 			}
@@ -236,18 +228,13 @@ Display.prototype = {
 			$("#downloadBtnCont").append($options);
 		}
 	},
-	// Updates the display
+	// Updates the display LIST-ITEM
 	updateDisplay: function($li, size, forceNeutralFloat) {
+		var item = qualities.getFromItag($li.attr("itag"));
 		var sizes = qualities.sizes;
 
-		// Attempt to obtain the size from the qualities values
-		var matchedQualities = qualities.items.listMatches("value", $li.attr("value"));
-		if (matchedQualities.length > 0) {
-			matchedQualities[0].size = size;
-		}
-
 		var _this = this;
-		var color = ($li.attr("dash") === "true") ? this.SIZE_WAITING : this.SIZE_LOADED;
+		var color = (item.dash) ? this.SIZE_WAITING : this.SIZE_LOADED;
 
 		// If the SIZE tag doesn't already exist, add it
 		var extraClass = (forceNeutralFloat) ? " floatNormal" : "";
@@ -265,14 +252,13 @@ Display.prototype = {
 		$spanSize.html(sizes.formatSize(size));
 
 		// If it is of the DASH format
-		if ($li.attr("dash") === "true") {
+		if (item.dash) {
 			if (globalProperties.audioSize) {
 				// Let the size be the sum of the size and the audio size
 				size = parseInt(size) + parseInt(globalProperties.audioSize);
 
 				$li.find("span.size").html(sizes.formatSize(size));
 				$li.find("span.size").css("color", this.SIZE_LOADED);
-				$li.attr("size", size);
 
 			} else {
 				// Try again in 2 seconds
@@ -283,7 +269,7 @@ Display.prototype = {
 		}
 	},
 
-	//Returns a jquery element of the download button with a certain text
+	// Returns a jquery element of the download button with a certain text
 	updateDownloadButton: function (text, disabled) {
 		// Create the download button container
 		var $container = this.checkContainer();
@@ -330,6 +316,7 @@ Display.prototype = {
 
 		// If an element was passed, prepend it
 		if ($li) {
+			var item = qualities.getFromItag($li.attr("itag"));
 			$span = $downloadBtnInfo.find("span:eq(0)");
 			if ($span.length === 0) {
 				$span = $("<span>");
@@ -340,13 +327,7 @@ Display.prototype = {
 
 			// Set the span ATTRIBUTES
 			$span.attr({
-				"label":$li.attr("label"),
-				"url"  :$li.attr("url"),
-				"type" :$li.attr("type"),
-				"dash" :$li.attr("dash"),
-				"muted":$li.attr("muted"),
-				"mp3"  :$li.attr("mp3"),
-				"value":$li.attr("value")
+				"itag": item.itag
 			});
 
 			var $child = $span.find("span.text");
@@ -358,7 +339,7 @@ Display.prototype = {
 			}
 
 			// Set the span HTML
-			$child.html($span.attr("label"));
+			$child.html(item.label);
 		}
 	},
 
@@ -376,14 +357,14 @@ Display.prototype = {
 
 		return $container;
 	},
-	getTags: function($li) {
+	getTags: function(quality) {
 		$tags = [];
 		$tags.push($("<span>", {
 			class:"tag ignoreMouse",
-			html:$li.attr("type")
+			html:quality.type
 		}));
 
-		var dash = $li.attr("dash");
+		var dash = quality.dash;
 		if (dash && dash !== "false") {
 			$tags.push($("<span>", {
 				class:"tag ignoreMouse",
@@ -391,7 +372,7 @@ Display.prototype = {
 			}));
 		}
 
-		var muted = $li.attr("muted");
+		var muted = quality.muted;
 		if (muted && muted !== "false") {
 			$tags.push($("<span>", {
 				class:"tag ignoreMouse",
@@ -586,7 +567,7 @@ Qualities.prototype = {
 			var tag = this.itags[itag] || {};
 
 			// Get the value from the tag
-			var val = this.getVal(tag);
+			var value = this.getValue(tag);
 
 			// Get the label from the tag
 			var label = sect.getSetting("quality_label") || this.getLabel(tag);
@@ -622,7 +603,7 @@ Qualities.prototype = {
 				muted: tag.muted || false,
 				label: label,
 				audio: tag.url || false,
-				value: val,
+				value: value
 			};
 			if (this.checkValid(item)) {
 				this.items.push(item);
@@ -639,8 +620,8 @@ Qualities.prototype = {
 			// If it is the audio url - find the size and update
 			if (tag.type === "m4a" && tag.audio) {
 				var $li = $("<li>", {
-					url:url,
-					value:val,
+					url  : url,
+					itag : itag,
 				});
 
 				this.sizes.getSize($li, function($li, size) {
@@ -663,31 +644,31 @@ Qualities.prototype = {
 
 		return label;
 	},
-	getVal: function(tag) {
+	getValue: function(tag) {
 		// Base value is the resolution OR 0
-		var val = tag.resolution || 0;
+		var value = tag.resolution || 0;
 
 		// Multiply if it has an fps tag (high frame rate)
 		if (tag.fps >= 30) {
-			val += 10;
+			value += 10;
 		}
 
 		// Multiply if it is mp4
 		if (tag.type === "mp4") {
-			val *= 100;
+			value *= 100;
 		}
 
 		// Make it negative if it's audio
 		if (tag.audio) {
-			val -= 5;
-			val *= -1;
+			value -= 5;
+			value *= -1;
 		}
 
 		if (tag.type === "mp3") {
-			val -= 1;
+			value -= 1;
 		}
 
-		return val;
+		return value;
 	},
 
 	sortItems: function() {
@@ -770,6 +751,22 @@ Qualities.prototype = {
 			newItem.type = "mp3";
 			this.items.push(newItem);
 		}
+	},
+
+	// Get from ITAG
+	getFromItag: function(itag) {
+		var matches = qualities.items.listMatches("itag", Number(itag));
+		
+		// Audio can have multiple (i.e. for MP3)
+		var notAudio = Number(itag) !== 140;
+
+		if (matches.length !== 1 && notAudio) {
+			console.log("ERROR: Found "+matches.length+" with itag: "+itag);
+		}
+		var item = matches[0] || {};
+
+		// Return the item obtained from the itag
+		return item;
 	}
 };
 
@@ -787,11 +784,12 @@ function GetSizes() {
 
 GetSizes.prototype = {
 	getSize: function($li, callback) {
-		var url = $li.attr("url");
+		console.log($li.attr("itag"));
+		var item = qualities.getFromItag($li.attr("itag"));
+		var url = item.url;
 
 		// Attempt to obtain the size from the qualities values
-		var matchedQualities = qualities.items.listMatches("value", $li.attr("value"));
-		var size = (matchedQualities.length > 0) ? matchedQualities[0].size : false;
+		var size = item.size;
 
 		if (size) {
 			callback($li, size);
@@ -1092,6 +1090,143 @@ AjaxClass.prototype = {
 	}
 };
 
+// src/classes/unique/css.js
+// =================================================
+// This function adds styling to the page by
+// injecting CSS into the document
+
+(function() {
+	var css = {
+		".disabled": {
+			"cursor":"default!important",
+		},
+		".midalign": {
+			"vertical-align":"middle!important",
+		},
+		".unselectable": {
+			"-webkit-user-select":"none",
+			"-moz-user-select":"none",
+			"-ms-user-select":"none",
+		},
+		"#downloadBtnCont": {
+			"margin-left":"1em",
+			"position":"relative",
+			"display":"inline-block,",
+		},
+		"#downloadBtn": {
+			"padding":"0 8px 0 5.5px",
+			"height":"24px",
+			"background-color":"green",
+			"color":"white",
+			"font-weight":"normal",
+			"box-shadow":"0 1px 0 rgba(0,0,0,0.05)",
+			"vertical-align":"middle",
+			"font-size":"11px",
+			"border":"solid 1px transparent",
+			"border-radius":"2px 0 0 2px",
+			"cursor":"pointer",
+			"font":"11px Roboto,arial,sans-serif",
+			"-webkit-user-select":"none",
+			"-moz-user-select":"none",
+			"-ms-user-select":"none",
+			"user-select":"none",
+		},
+		"#downloadBtn.disabled": {
+			"background-color":"gray!important"
+		},
+		"#downloadBtn:hover": {
+			"background-color":"darkgreen"
+		},
+		"#downloadBtn span": {
+			"font-size":"12px"
+		},
+		"#downloadBtn img": {
+			"height":"12px"
+		},
+		"#downloadBtnInfo": {
+			"cursor":"default",
+			"height":"22px",
+			"line-height":"24px",
+			"padding":"0 6px",
+			"color":"#737373",
+			"font-size":"11px",
+			"text-align":"center",
+			"display":"inline-block",
+			"margin-left":"-2px",
+			"border":"1px solid #ccc",
+			"background-color":"#fafafa",
+			"vertical-align":"middle",
+			"border-radius":"0 2px 2px 0",
+		},
+		"span.text": {
+			"margin-right":"0.2em",
+		},
+		"ul#options": {
+			"position":"absolute!important",
+			"background-color":"white",
+			"z-index":"500",
+			"width":"200px",
+			"padding":"0 5px",
+			"cursor":"default",
+			"box-shadow":"0 1px 2px rgba(0,0,0,0.5)",
+			"left":"0",
+			"display":"none",
+		},
+		"ul#options li": {
+			"line-height":"2em",
+			"padding":" 0 5px",
+			"margin":"0 -5px",
+		},
+		"ul#options li:hover": {
+			"background-color":"orange",
+		},
+		"span.size": {
+			"float":"right",
+		},
+		"span.tag": {
+			"margin":"0.2em",
+			"padding":"0.2em",
+			"background-color":"lightblue",
+			"color":"grey",
+		},
+		".floatNormal": {
+			"float":"inherit!important",
+		},
+		".ignoreMouse": {
+			"pointer-events":"none",
+		},
+		"#watch7-user-header": {
+			"overflow":"visible!important",
+		},
+		"#watch7-content": {
+			"overflow":"visible!important",
+			"z-index":"500!important",
+		},
+
+		// Fix the drag-drop events causing ghost image
+		"img": {
+			"pointer-events": "none"
+		}
+	};
+
+	// Append the CSS to the document
+	var node = document.createElement("style");
+	var html = "";
+	for (var key in css) {
+		var props = css[key];
+
+		html += key + " {\n";
+		for (var prop in props) {
+			html += "\t" + prop + ":" + props[prop] + ";\n";
+		}
+
+		html += "}\n";
+	}
+
+	node.innerHTML = html;
+	document.body.appendChild(node);
+})();
+
 // src/classes/unique/download.js
 // =================================================
 // Functions that are used to download the video and audio
@@ -1104,12 +1239,13 @@ function Download() {
 Download.prototype = {
 	// Download the file
 	getVid: function($span, title) {
-		var type = $span.attr("type");
-		var dash = ($span.attr("dash") === "true") ? true : false;
+		var item = qualities.getFromItag($span.attr("itag"));
+		var type = item.type;
+		var dash = item.dash;
 
-		title = title || this.getTitle($span.attr("label"));
+		title = title || this.getTitle(item.label);
 		var name = title;
-		var url = $span.attr("url").setSetting("title", encodeURIComponent(title));
+		var url = item.url.setSetting("title", encodeURIComponent(title));
 
 		// MP3 change
 		if (type === "mp3") {
@@ -1265,147 +1401,11 @@ Unsafe.prototype = {
 	}
 };
 
-// src/css.js
-// =================================================
-// This function adds styling to the page by
-// injecting CSS into the document
-
-(function() {
-	var css = {
-		".disabled": {
-			"cursor":"default!important",
-		},
-		".midalign": {
-			"vertical-align":"middle!important",
-		},
-		".unselectable": {
-			"-webkit-user-select":"none",
-			"-moz-user-select":"none",
-			"-ms-user-select":"none",
-		},
-		"#downloadBtnCont": {
-			"margin-left":"1em",
-			"position":"relative",
-			"display":"inline-block,",
-		},
-		"#downloadBtn": {
-			"padding":"0 8px 0 5.5px",
-			"height":"24px",
-			"background-color":"green",
-			"color":"white",
-			"font-weight":"normal",
-			"box-shadow":"0 1px 0 rgba(0,0,0,0.05)",
-			"vertical-align":"middle",
-			"font-size":"11px",
-			"border":"solid 1px transparent",
-			"border-radius":"2px 0 0 2px",
-			"cursor":"pointer",
-			"font":"11px Roboto,arial,sans-serif",
-			"-webkit-user-select":"none",
-			"-moz-user-select":"none",
-			"-ms-user-select":"none",
-			"user-select":"none",
-		},
-		"#downloadBtn.disabled": {
-			"background-color":"gray!important"
-		},
-		"#downloadBtn:hover": {
-			"background-color":"darkgreen"
-		},
-		"#downloadBtn span": {
-			"font-size":"12px"
-		},
-		"#downloadBtn img": {
-			"height":"12px"
-		},
-		"#downloadBtnInfo": {
-			"cursor":"default",
-			"height":"22px",
-			"line-height":"24px",
-			"padding":"0 6px",
-			"color":"#737373",
-			"font-size":"11px",
-			"text-align":"center",
-			"display":"inline-block",
-			"margin-left":"-2px",
-			"border":"1px solid #ccc",
-			"background-color":"#fafafa",
-			"vertical-align":"middle",
-			"border-radius":"0 2px 2px 0",
-		},
-		"span.text": {
-			"margin-right":"0.2em",
-		},
-		"ul#options": {
-			"position":"absolute!important",
-			"background-color":"white",
-			"z-index":"500",
-			"width":"200px",
-			"padding":"0 5px",
-			"cursor":"default",
-			"box-shadow":"0 1px 2px rgba(0,0,0,0.5)",
-			"left":"0",
-		},
-		"ul#options li": {
-			"line-height":"2em",
-			"padding":" 0 5px",
-			"margin":"0 -5px",
-		},
-		"ul#options li:hover": {
-			"background-color":"orange",
-		},
-		"span.size": {
-			"float":"right",
-		},
-		"span.tag": {
-			"margin":"0.2em",
-			"padding":"0.2em",
-			"background-color":"lightblue",
-			"color":"grey",
-		},
-		".floatNormal": {
-			"float":"inherit!important",
-		},
-		".ignoreMouse": {
-			"pointer-events":"none",
-		},
-		"#watch7-user-header": {
-			"overflow":"visible!important",
-		},
-		"#watch7-content": {
-			"overflow":"visible!important",
-			"z-index":"500!important",
-		},
-
-		// Fix the drag-drop events causing ghost image
-		"img": {
-			"pointer-events": "none"
-		}
-	};
-
-	// Append the CSS to the document
-	var node = document.createElement("style");
-	var html = "";
-	for (var key in css) {
-		var props = css[key];
-
-		html += key + " {\n";
-		for (var prop in props) {
-			html += "\t" + prop + ":" + props[prop] + ";\n";
-		}
-
-		html += "}\n";
-	}
-
-	node.innerHTML = html;
-	document.body.appendChild(node);
-})();
-
 // src/main.js
 // =================================================
 // Variables
 // Selected quality
-localStorage.selQuality = localStorage.selQuality || 7200000;
+localStorage.selQuality = localStorage.selQuality || 298;
 
 // Default settings
 var defaultSettings = {

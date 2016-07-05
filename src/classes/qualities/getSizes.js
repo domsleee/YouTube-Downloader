@@ -10,11 +10,11 @@ function GetSizes() {
 
 GetSizes.prototype = {
 	getSize: function($li, callback) {
-		var url = $li.attr("url");
+		var item = qualities.getFromItag($li.attr("itag"));
+		var url = item.url;
 
 		// Attempt to obtain the size from the qualities values
-		var matchedQualities = qualities.items.listMatches("value", $li.attr("value"));
-		var size = (matchedQualities.length > 0) ? matchedQualities[0].size : false;
+		var size = item.size;
 
 		if (size) {
 			callback($li, size);

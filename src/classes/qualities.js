@@ -179,7 +179,7 @@ Qualities.prototype = {
 			var tag = this.itags[itag] || {};
 
 			// Get the value from the tag
-			var val = this.getVal(tag);
+			var value = this.getValue(tag);
 
 			// Get the label from the tag
 			var label = sect.getSetting("quality_label") || this.getLabel(tag);
@@ -215,7 +215,7 @@ Qualities.prototype = {
 				muted: tag.muted || false,
 				label: label,
 				audio: tag.url || false,
-				value: val,
+				value: value
 			};
 			if (this.checkValid(item)) {
 				this.items.push(item);
@@ -232,8 +232,8 @@ Qualities.prototype = {
 			// If it is the audio url - find the size and update
 			if (tag.type === "m4a" && tag.audio) {
 				var $li = $("<li>", {
-					url:url,
-					value:val,
+					url  : url,
+					itag : itag,
 				});
 
 				this.sizes.getSize($li, function($li, size) {
@@ -256,31 +256,31 @@ Qualities.prototype = {
 
 		return label;
 	},
-	getVal: function(tag) {
+	getValue: function(tag) {
 		// Base value is the resolution OR 0
-		var val = tag.resolution || 0;
+		var value = tag.resolution || 0;
 
 		// Multiply if it has an fps tag (high frame rate)
 		if (tag.fps >= 30) {
-			val += 10;
+			value += 10;
 		}
 
 		// Multiply if it is mp4
 		if (tag.type === "mp4") {
-			val *= 100;
+			value *= 100;
 		}
 
 		// Make it negative if it's audio
 		if (tag.audio) {
-			val -= 5;
-			val *= -1;
+			value -= 5;
+			value *= -1;
 		}
 
 		if (tag.type === "mp3") {
-			val -= 1;
+			value -= 1;
 		}
 
-		return val;
+		return value;
 	},
 
 	sortItems: function() {
@@ -363,5 +363,21 @@ Qualities.prototype = {
 			newItem.type = "mp3";
 			this.items.push(newItem);
 		}
+	},
+
+	// Get from ITAG
+	getFromItag: function(itag) {
+		var matches = qualities.items.listMatches("itag", Number(itag));
+		
+		// Audio can have multiple (i.e. for MP3)
+		var notAudio = Number(itag) !== 140;
+
+		if (matches.length !== 1 && notAudio) {
+			console.log("ERROR: Found "+matches.length+" with itag: "+itag);
+		}
+		var item = matches[0] || {};
+
+		// Return the item obtained from the itag
+		return item;
 	}
 };

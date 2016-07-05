@@ -12,13 +12,13 @@ function Display() {
 	// Download icon (with cloud)
 	this.$downloadIcon = $("<img>", {
 		style:"margin-right:4.5px",
-		class:'midalign',
+		class:"midalign",
 		src:"https://raw.githubusercontent.com/Domination9987/YouTube-Downloader/master/graphics/downIconMed.png"
 	});
 	// Down select arrow (for dropdown)
 	this.$downArrow = $("<img>", {
 		style:"margin-left:6px;",
-		class:'midalign',
+		class:"midalign",
 		src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAAV0lEQVQoU2NkIBEwkqiegXQNc+fOTWBkZJxPjE3///9PBNtAjCaQ4uTk5AVwJ+HTBFMMMhzFD9g0ISvG0IDuPHTFWDXANIFokJvRA4P0YCUmOJHVkGwDAPVTKkQsO0MlAAAAAElFTkSuQmCC"
 	});
 }
@@ -52,29 +52,21 @@ Display.prototype = {
 		$options = $("<ul>", {
 			id:"options",
 			class:"unselectable",
-			style:"display:none;position:absolute"
 		});
 
+		// Initialise items in the drop-down list
 		for (i = 0; i<qualities.items.length; i++) {
 			var quality = qualities.items[i];
 			var display = (quality.hidden) ? "none" : "inherit";
 
 			$li = $("<li>", {
 				html  : quality.label,
-				value : quality.value,
-				url   : quality.url,
-				type  : quality.type,
-				label : quality.label,
-				hidden: quality.hidden,
+				itag  : quality.itag,
 				style : "display:"+display,
-				dash  : quality.dash,
-				muted : quality.muted,
-				mp3   : quality.mp3,
-				size  : quality.size
 			});
 
 			// Tags - get them and then append them to the $li
-			$tags = this.getTags($li);
+			$tags = this.getTags(quality);
 			for (var j = 0; j<$tags.length; j++) {
 				$li.append($tags[j]);
 			}
@@ -86,8 +78,8 @@ Display.prototype = {
 			if (!$topEl) $topEl = $li;
 
 			// If it matches the set quality, assign it to the info box
-			var sameQuality = (Number($li.attr("value")) === Number(localStorage.selQuality));
-			var visible     = !$li.attr("hidden");
+			var sameQuality = (quality.itag === Number(localStorage.selQuality));
+			var visible     = !quality.hidden;
 			if (sameQuality && visible) {
 				$topEl = $li;
 			}
@@ -101,18 +93,13 @@ Display.prototype = {
 			$("#downloadBtnCont").append($options);
 		}
 	},
-	// Updates the display
+	// Updates the display LIST-ITEM
 	updateDisplay: function($li, size, forceNeutralFloat) {
+		var item = qualities.getFromItag($li.attr("itag"));
 		var sizes = qualities.sizes;
 
-		// Attempt to obtain the size from the qualities values
-		var matchedQualities = qualities.items.listMatches("value", $li.attr("value"));
-		if (matchedQualities.length > 0) {
-			matchedQualities[0].size = size;
-		}
-
 		var _this = this;
-		var color = ($li.attr("dash") === "true") ? this.SIZE_WAITING : this.SIZE_LOADED;
+		var color = (item.dash) ? this.SIZE_WAITING : this.SIZE_LOADED;
 
 		// If the SIZE tag doesn't already exist, add it
 		var extraClass = (forceNeutralFloat) ? " floatNormal" : "";
@@ -130,14 +117,13 @@ Display.prototype = {
 		$spanSize.html(sizes.formatSize(size));
 
 		// If it is of the DASH format
-		if ($li.attr("dash") === "true") {
+		if (item.dash) {
 			if (globalProperties.audioSize) {
 				// Let the size be the sum of the size and the audio size
 				size = parseInt(size) + parseInt(globalProperties.audioSize);
 
 				$li.find("span.size").html(sizes.formatSize(size));
 				$li.find("span.size").css("color", this.SIZE_LOADED);
-				$li.attr("size", size);
 
 			} else {
 				// Try again in 2 seconds
@@ -148,7 +134,7 @@ Display.prototype = {
 		}
 	},
 
-	//Returns a jquery element of the download button with a certain text
+	// Returns a jquery element of the download button with a certain text
 	updateDownloadButton: function (text, disabled) {
 		// Create the download button container
 		var $container = this.checkContainer();
@@ -195,6 +181,7 @@ Display.prototype = {
 
 		// If an element was passed, prepend it
 		if ($li) {
+			var item = qualities.getFromItag($li.attr("itag"));
 			$span = $downloadBtnInfo.find("span:eq(0)");
 			if ($span.length === 0) {
 				$span = $("<span>");
@@ -205,13 +192,7 @@ Display.prototype = {
 
 			// Set the span ATTRIBUTES
 			$span.attr({
-				"label":$li.attr("label"),
-				"url"  :$li.attr("url"),
-				"type" :$li.attr("type"),
-				"dash" :$li.attr("dash"),
-				"muted":$li.attr("muted"),
-				"mp3"  :$li.attr("mp3"),
-				"value":$li.attr("value")
+				"itag": item.itag
 			});
 
 			var $child = $span.find("span.text");
@@ -223,7 +204,7 @@ Display.prototype = {
 			}
 
 			// Set the span HTML
-			$child.html($span.attr("label"));
+			$child.html(item.label);
 		}
 	},
 
@@ -241,14 +222,14 @@ Display.prototype = {
 
 		return $container;
 	},
-	getTags: function($li) {
+	getTags: function(quality) {
 		$tags = [];
 		$tags.push($("<span>", {
 			class:"tag ignoreMouse",
-			html:$li.attr("type")
+			html:quality.type
 		}));
 
-		var dash = $li.attr("dash");
+		var dash = quality.dash;
 		if (dash && dash !== "false") {
 			$tags.push($("<span>", {
 				class:"tag ignoreMouse",
@@ -256,7 +237,7 @@ Display.prototype = {
 			}));
 		}
 
-		var muted = $li.attr("muted");
+		var muted = quality.muted;
 		if (muted && muted !== "false") {
 			$tags.push($("<span>", {
 				class:"tag ignoreMouse",

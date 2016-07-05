@@ -76,6 +76,7 @@
 			"cursor":"default",
 			"box-shadow":"0 1px 2px rgba(0,0,0,0.5)",
 			"left":"0",
+			"display":"none",
 		},
 		"ul#options li": {
 			"line-height":"2em",
