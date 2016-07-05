@@ -52,7 +52,6 @@ function Program() {
 		// If the old thing is still there, wait a while
 		ytplayer = ytp || {};
 		if ($("#downloadBtn").length > 0 || !ytplayer.config) {
-			console.log(ytplayer !== undefined);
 			setTimeout(Program, 2000);
 			return;
 		}

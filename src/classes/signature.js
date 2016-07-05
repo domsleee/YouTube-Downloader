@@ -16,17 +16,15 @@ Signature.prototype = {
 		}
 
 		var _this = this;
-		try {
-			Ajax.request({
-				method:"GET",
-				url:scriptURL,
-				success:function(xhr, text, jqXHR) {
-					var text = (typeof(xhr) === "string") ? jqXHR.responseText : xhr.responseText;
-					_this.findSignatureCode(text);
-					callback();
-				}
-			});
-		} catch(e) { }
+		Ajax.request({
+			method:"GET",
+			url:scriptURL,
+			success:function(xhr, text, jqXHR) {
+				var text = (typeof(xhr) === "string") ? jqXHR.responseText : xhr.responseText;
+				_this.findSignatureCode(text);
+				callback();
+			}
+		});
 	},
 	getScriptURL: function(scriptURL) {
 		var split = scriptURL.split("//");

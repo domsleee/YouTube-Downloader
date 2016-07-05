@@ -784,7 +784,6 @@ function GetSizes() {
 
 GetSizes.prototype = {
 	getSize: function($li, callback) {
-		console.log($li.attr("itag"));
 		var item = qualities.getFromItag($li.attr("itag"));
 		var url = item.url;
 
@@ -853,17 +852,15 @@ Signature.prototype = {
 		}
 
 		var _this = this;
-		try {
-			Ajax.request({
-				method:"GET",
-				url:scriptURL,
-				success:function(xhr, text, jqXHR) {
-					var text = (typeof(xhr) === "string") ? jqXHR.responseText : xhr.responseText;
-					_this.findSignatureCode(text);
-					callback();
-				}
-			});
-		} catch(e) { }
+		Ajax.request({
+			method:"GET",
+			url:scriptURL,
+			success:function(xhr, text, jqXHR) {
+				var text = (typeof(xhr) === "string") ? jqXHR.responseText : xhr.responseText;
+				_this.findSignatureCode(text);
+				callback();
+			}
+		});
 	},
 	getScriptURL: function(scriptURL) {
 		var split = scriptURL.split("//");
@@ -1281,7 +1278,7 @@ Download.prototype = {
 	// Download audio if required
 	handleAudio: function(name) {
 		// Download the audio file
-		this.getVid($("#options").find("li[type=m4a]"), "AUDIO - " + name);
+		this.getVid($("#options").find("li[itag=140]:eq(0)"), "AUDIO - " + name);
 
 		// Download the script
 
@@ -1457,7 +1454,6 @@ function Program() {
 		// If the old thing is still there, wait a while
 		ytplayer = ytp || {};
 		if ($("#downloadBtn").length > 0 || !ytplayer.config) {
-			console.log(ytplayer !== undefined);
 			setTimeout(Program, 2000);
 			return;
 		}
