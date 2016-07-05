@@ -121,7 +121,7 @@ function AddEvents() {
 		$("#options").hide();
 
 		// Update the relevant settings
-		localStorage.selQuality = Number($(this).attr("value"));
+		localStorage.selQuality = Number($(this).attr("itag"));
 
 		// Update the info
 		display.updateInfo($(this));

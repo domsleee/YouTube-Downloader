@@ -25,6 +25,7 @@ GetSizes.prototype = {
 				url:url,
 				success:function(xhr, text, jqXHR) {
 					var size = Number(Ajax.getResponseHeader(xhr, text, jqXHR, "Content-length"));
+					item.size = size;
 					callback($li, size);
 				}
 			});
