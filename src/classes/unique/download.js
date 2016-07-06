@@ -44,7 +44,7 @@ Download.prototype = {
 			str += " " + label.toString();
 		}
 
-		str = str.replace(/!|\+|\.|\:|\?|\||\\|\//g, "");
+		str = str.replace(/!|\+|\.|\:|\?|\||\\|\//g, "").replace(/\"/g, "'");
 		return str;
 	},
 	// Download audio if required
