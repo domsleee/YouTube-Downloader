@@ -586,10 +586,10 @@ Qualities.prototype = {
 
 			// Fix the types
 			if (newType === "mp4" && tag.audio) {
-				tag.type = "m4a";
+				newType = "m4a";
 			}
 			if (newType === "mp4" && tag.dash) {
-				tag.type = "m4v";
+				newType = "m4v";
 			}
 
 			// Append to qualities (if it shouldn't be ignored)
@@ -597,7 +597,7 @@ Qualities.prototype = {
 				itag : itag,
 				url  : url,
 				size : size,
-				type : tag.type,
+				type : newType
 				dash : tag.dash || false,
 				muted: tag.muted || false,
 				label: label,
