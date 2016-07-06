@@ -335,7 +335,7 @@ Qualities.prototype = {
 				if (splitLengths.url !== 1 || splitLengths.sig !== 1) {
 					console.log("checkPotential");
 					console.log(split[i]);
-					console.log(splitLengths.url, splitLengths,sig);
+					console.log(splitLengths.url, splitLengths.sig);
 				}
 			}
 		}

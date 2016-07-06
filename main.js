@@ -135,7 +135,6 @@ $.fn.extend({
 // =================================================
 // Generates the display, updates the display, all
 // things related to the interface can be found here
-
 function Display() {
 	// The text colour of the size once loaded
 	this.SIZE_LOADED = "red";
@@ -152,9 +151,9 @@ function Display() {
 	});
 	// Down select arrow (for dropdown)
 	this.$downArrow = $("<img>", {
-		style:"margin-left:6px;",
+		style:"margin-left:6px;width:13px;margin-bottom:-13px;transform:translateY(-50%);",
 		class:"midalign",
-		src:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAAV0lEQVQoU2NkIBEwkqiegXQNc+fOTWBkZJxPjE3///9PBNtAjCaQ4uTk5AVwJ+HTBFMMMhzFD9g0ISvG0IDuPHTFWDXANIFokJvRA4P0YCUmOJHVkGwDAPVTKkQsO0MlAAAAAElFTkSuQmCC"
+		src:"https://raw.githubusercontent.com/Domination9987/YouTube-Downloader/master/graphics/downArrowLarge.png"
 	});
 }
 
@@ -723,7 +722,7 @@ Qualities.prototype = {
 				if (splitLengths.url !== 1 || splitLengths.sig !== 1) {
 					console.log("checkPotential");
 					console.log(split[i]);
-					console.log(splitLengths.url, splitLengths,sig);
+					console.log(splitLengths.url, splitLengths.sig);
 				}
 			}
 		}
