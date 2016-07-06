@@ -267,7 +267,7 @@ Qualities.prototype = {
 		}
 
 		// Multiply if it is mp4
-		if (tag.type === "mp4") {
+		if (tag.type === "mp4" || tag.type === "m4v") {
 			value *= 100;
 		}
 
