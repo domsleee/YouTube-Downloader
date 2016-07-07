@@ -25,8 +25,8 @@ function main {
 		title=$(getTitle "$i" "m4a")
 		for j in *.m4v; do
 			vTitle=$(getTitle "$j" "m4v")
-			if [ "$AUDIO - vTitle" == "$title" ] && [ "$j" != "*.m4v" ]; then
-				mux "$j" "$i" "$title.mp4"
+			if [ "AUDIO - $vTitle" == "$title" ] && [ "$j" != "*.m4v" ]; then
+				mux "$j" "$i" "$vTitle.mp4"
 			fi
 		done
 

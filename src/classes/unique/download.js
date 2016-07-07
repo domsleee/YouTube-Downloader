@@ -50,7 +50,7 @@ Download.prototype = {
 	// Download audio if required
 	handleAudio: function(name) {
 		// Download the audio file
-		this.getVid($("#options").find("li[itag=141]:eq(0)"), "AUDIO - " + name);
+		this.getVid($("#options").find("li[itag=140]:eq(0)"), "AUDIO - " + name);
 
 		// Download the script
 
