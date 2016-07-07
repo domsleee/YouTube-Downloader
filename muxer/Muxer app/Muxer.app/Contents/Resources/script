@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Obligatory title and information
-clear
 echo "YouTube Downloader Muxer"
 echo "-----------------------------------------------"
 echo "This application merges *.m4v, *.webm video with"
@@ -10,7 +9,8 @@ echo
 
 # Location of ffmpeg (may need to be changed
 # if wrapping for application wrapping)
-ffmpeg="ffmpeg"
+ffmpeg="$(pwd)/ffmpeg"
+cd ../../../
 
 # Number of items processed
 vidCount=0
