@@ -1,11 +1,10 @@
 #!/bin/bash
 
 # Obligatory title and information
-clear
-echo "YouTube Downloader Muxer"
+echo "YouTube Downloader Muxer v1.1"
 echo "-----------------------------------------------"
-echo "This application merges *.m4v, *.webm video with"
-echo "*.m4a audio into either *.mp4 or *.avi"
+echo "Post processing for YouTube Downloader"
+echo "See documentation for more information"
 echo
 
 # Location of ffmpeg (may need to be changed
@@ -64,7 +63,6 @@ function main {
 	echo
 	echo "TOTAL:     $total"
 	echo "-------------------============-------------------"
-	echo
 }
 
 # Get the title from the entire filename
@@ -80,7 +78,7 @@ function getHead {
 # VIDEO - mux the m4v and m4a together
 # Parameters: inputOne, inputTwo, fileName
 function mux {
-	$ffmpeg -loglevel panic -i "$1" -i "$2" -vcodec copy -acodec copy "$3"
+	"$ffmpeg" -loglevel panic -i "$1" -i "$2" -vcodec copy -acodec copy "$3"
 	echo "MUX $?: $3"
 	if [ $? -gt 0 ]; then
 		vidErrCount=$((vidErrCount + 1))
@@ -96,7 +94,7 @@ function mux {
 function mp3 {
 	# Get string after "- "
 	name=${2#*- }
-	$ffmpeg -loglevel panic -i "$1" -c:a libmp3lame -ac 2 -b:a 192k "$name"
+	"$ffmpeg" -loglevel panic -i "$1" -c:a libmp3lame -ac 2 -b:a 192k "$name"
 	echo "MP3 $?: $name"
 	if [ $? -gt 0 ]; then
 		audErrCount=$((audErrCount + 1))
