@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Obligatory title and information
-echo "YouTube Downloader Muxer v1.1"
+echo "YouTube Downloader Muxer v1.2"
 echo "-----------------------------------------------"
 echo "Post processing for YouTube Downloader"
 echo "See documentation for more information"
@@ -53,7 +53,7 @@ function main {
 	total=$((vidCount + vidErrCount + audCount + audErrCount))
 	echo .
 	echo "SUMMARY"
-	echo "-------------------============-------------------"
+	echo "-----------------------------------------------"
 	echo "MUX (M4V + M4A -> MP4)"
 	echo "- SUCCESS: $vidCount"
 	echo "- ERROR:   $vidErrCount"
@@ -63,7 +63,7 @@ function main {
 	echo "- ERROR:   $audErrCount"
 	echo .
 	echo "TOTAL:     $total"
-	echo "-------------------============-------------------"
+	echo "-----------------------------------------------"
 }
 
 # Get the title from the entire filename
@@ -79,11 +79,13 @@ function getHead {
 # VIDEO - mux the m4v and m4a together
 # Parameters: inputOne, inputTwo, fileName
 function mux {
-	"$ffmpeg" -loglevel panic -i "$1" -i "$2" -vcodec copy -acodec copy "$3"
-	echo "MUX $?: $3"
+	printf "$3..."
+	"$ffmpeg" -y -loglevel panic -i "$1" -i "$2" -vcodec copy -acodec copy "$3"
 	if [ $? -gt 0 ]; then
+		printf "ERROR\n"
 		vidErrCount=$((vidErrCount + 1))
 	else
+		printf "DONE\n"
 		rm -f "$1"
 		rm -f "$2"
 		vicCount=$((vidCount + 1))
@@ -95,11 +97,13 @@ function mux {
 function mp3 {
 	# Get string after "- "
 	name=${2#*- }
-	"$ffmpeg" -loglevel panic -i "$1" -c:a libmp3lame -ac 2 -b:a 192k "$name"
-	echo "MP3 $?: $name"
+	printf "$name..."
+	"$ffmpeg" -y -loglevel panic -i "$1" -c:a libmp3lame -ac 2 -b:a 192k "$name"
 	if [ $? -gt 0 ]; then
+		printf "ERROR\n"
 		audErrCount=$((audErrCount + 1))
 	else
+		printf "DONE\n"
 		rm -f "$1"
 		audCount=$((audCount + 1))
 	fi
