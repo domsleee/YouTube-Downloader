@@ -22,6 +22,8 @@ function main {
 	# Work through videos
 	for i in *.m4a; do
 		title=$(getTitle "$i" "m4a")
+
+		# m4a && m4v processing
 		for j in *.m4v; do
 			vTitle=$(getTitle "$j" "m4v")
 			if [ "AUDIO - $vTitle" == "$title" ] && [ "$j" != "*.m4v" ]; then
@@ -29,14 +31,26 @@ function main {
 			fi
 		done
 
-		# Webm processing (untested)
+		# m4a && webm processing (untested)
 		for j in *.webm; do
 			vTitle=$(getTitle "$j" "webm")
-			if [ "$vTitle" == "$title" ] && [ "$j" != "*.webm" ]; then
-				mux "$j" "$i" "$title.avi"
+			if [ "AUDIO - $vTitle" == "$title" ] && [ "$j" != "*.webm" ]; then
+				mux "$j" "$i" "$vTitle.webm"
 			fi
 		done
 	done
+
+	# webm && webm processing (untested)
+	for i in *.webm; do
+		title=$(getTitle "$i" "webm")
+		for j in *.webm; do
+			vTitle=$(getTitle "$j" "webm")
+			if [ "AUDIO - $vTitle" == "$title" ] && [ "$j" != "*.webm" ]; then
+				mux "$j" "$i" "$vTitle.webm"
+			fi
+		done
+	done
+
 
 	# Work through MP3
 	for i in *.m4a; do

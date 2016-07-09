@@ -157,91 +157,95 @@ Qualities.prototype = {
 	reset: function() {
 		this.items = [];
 	},
-	initialise: function() {
+	initialise: function(callback) {
 		this.reset();
-		var potential = this.getPotential();
-		var split     = potential.split(",");
+		var _this = this;
+		this.getPotentialDash(function(potential) {
+			var split = potential.split(",");
 
-		for (var i = 0; i<split.length; i++) {
-			// Get relevant properties
-			var sect = split[i];
-			var url  = decodeURIComponent(sect.getSetting("url"));
-			var s    = sect.getSetting("s");
-			var type = decodeURIComponent(url.getSetting("mime"));
-			var clen = url.getSetting("clen") || sect.getSetting("clen");
-			var itag = parseInt(url.getSetting("itag"), 10);
-			var size = false;
+			// Iterate through each option
+			for (var i = 0; i<split.length; i++) {
+				// Get relevant properties
+				var sect = split[i];
+				var url  = decodeURIComponent(sect.getSetting("url"));
+				var s    = sect.getSetting("s");
+				var type = decodeURIComponent(url.getSetting("mime"));
+				var clen = url.getSetting("clen") || sect.getSetting("clen");
+				var itag = parseInt(url.getSetting("itag"), 10);
+				var size = false;
 
-			// Decode the url
-			url = signature.decryptSignature(url, s);
+				// Decode the url
+				url = signature.decryptSignature(url, s);
 
-			// Get data from the ITAG identifier
-			var tag = this.itags[itag] || {};
+				// Get data from the ITAG identifier
+				var tag = _this.itags[itag] || {};
 
-			// Get the value from the tag
-			var value = this.getValue(tag);
+				// Get the value from the tag
+				var value = _this.getValue(tag);
 
-			// Get the label from the tag
-			var label = sect.getSetting("quality_label") || this.getLabel(tag);
+				// Get the label from the tag
+				var label = sect.getSetting("quality_label") || _this.getLabel(tag);
 
-			// If we have content-length, we can find size IMMEDIATELY
-			if (clen) {
-				size = parseInt(clen, 10);
-			}
+				// If we have content-length, we can find size IMMEDIATELY
+				if (clen) {
+					size = parseInt(clen, 10);
+				}
 
-			// Get the type from the tag
-			assert(type.split("/").length > 1, "Incorrect type: "+type);
-			var newType = type.split("/")[1].split(",")[0];
-			if (newType !== tag.type) {
-				console.log("Error with "+itag+", "+newType+"!="+tag.type);
-				console.log(decodeURIComponent(url));
-			}
+				// Get the type from the tag
+				assert(type.split("/").length > 1, "Incorrect type: "+type);
+				var newType = type.split("/")[1].split(",")[0];
+				if (newType !== tag.type) {
+					console.log("Error with "+itag+", "+newType+"!="+tag.type);
+					console.log(decodeURIComponent(url));
+				}
 
-			// Fix the types
-			if (newType === "mp4" && tag.audio) {
-				newType = "m4a";
-			}
-			if (newType === "mp4" && tag.dash) {
-				newType = "m4v";
-			}
+				// Fix the types
+				if (newType === "mp4" && tag.audio) {
+					newType = "m4a";
+				}
+				if (newType === "mp4" && tag.dash) {
+					newType = "m4v";
+				}
 
-			// Append to qualities (if it shouldn't be ignored)
-			var item = {
-				itag : itag,
-				url  : url,
-				size : size,
-				type : newType,
-				dash : tag.dash || false,
-				muted: tag.muted || false,
-				label: label,
-				audio: tag.url || false,
-				value: value
-			};
-			if (this.checkValid(item)) {
-				this.items.push(item);
+				// Append to qualities (if it shouldn't be ignored)
+				var item = {
+					itag : itag,
+					url  : url,
+					size : size,
+					type : newType,
+					dash : tag.dash || false,
+					muted: tag.muted || false,
+					label: label,
+					audio: tag.url || false,
+					value: value
+				};
+				if (_this.checkValid(item)) {
+					_this.items.push(item);
 
-			// Check if it should be added but HIDDEN
-			} else {
-				if (newType === "m4a") {
-					item.hidden = true;
-					this.items.push(item);
+				// Check if it should be added but HIDDEN
+				} else {
+					if (newType === "m4a") {
+						item.hidden = true;
+						_this.items.push(item);
+					}
+				}
+
+				_this.checkMP3(item);
+
+				// If it is the audio url - find the size and update
+				if (newType === "m4a" && tag.audio) {
+					var $li = $("<li>", {
+						url  : url,
+						itag : itag,
+					});
+
+					_this.sizes.getSize($li, function($li, size) {
+						globalProperties.audioSize = size;
+					});
 				}
 			}
-
-			this.checkMP3(item);
-
-			// If it is the audio url - find the size and update
-			if (newType === "m4a" && tag.audio) {
-				var $li = $("<li>", {
-					url  : url,
-					itag : itag,
-				});
-
-				this.sizes.getSize($li, function($li, size) {
-					globalProperties.audioSize = size;
-				});
-			}
-		}
+			callback();
+		});
 	},
 	getLabel: function(tag) {
 		var label = false;
@@ -315,11 +319,78 @@ Qualities.prototype = {
 
 		return valid;
 	},
+
+	// Get potential inclusive of dash formats from
+	// 2010-2011
+	getPotentialDash: function(callback) {
+		// Get native potential, within ytplayer
+		var potential = this.getPotential();
+
+		var dashmpd = ytplayer.config.args.dashmpd;
+
+		// We must make a get request, and find the
+		// additional qualities within the file
+		if (dashmpd !== undefined) {
+			console.log("Making dashmpd request...");
+			var _this = this;
+			Ajax.request({
+				method:"GET",
+				url:dashmpd,
+				success: function(xhr, text, jqXHR) {
+					var text = (typeof(xhr) === "string") ? jqXHR.responseText : xhr.responseText;
+
+					// Add the potential from BaseURL tags
+					var add = [];
+					var addPotential = text.split(/\<BaseURL\>([^\<]*)\<\/BaseURL\>/);
+					for (var i = 0; i<Math.floor(addPotential.length/2); i++) {
+						var url = addPotential[i*2 + 1];
+						add.push(_this.decodeURL(url));
+					}
+
+					assert(add.length > 0, "No videos found in dashmpd!");
+					potential = potential+",url="+add.join(",url=");
+					callback(potential);
+				}
+			});
+		} else {
+			callback(potential);
+		}
+	},
+
+	// Process the forward slashes / and make them into
+	// ampersands (&) and equals (=)
+	decodeURL: function(url) {
+		var split = url.split("videoplayback/");
+		var host = split[0];
+		var str = split[1];
+		str = str.replace(/\/([^\/]*(?:\/|$))/g, "=$1");
+		str = str.replace(/\//g, "&");
+		url = host+"videoplayback?"+str;
+
+		// Encode it
+		return encodeURIComponent(url);
+	},
 	// Get potential list
 	getPotential: function() {
 		assert(ytplayer !== undefined, "Ytplayer is undefined!");
-		var potential = ytplayer.config.args.adaptive_fmts + "," + ytplayer.config.args.url_encoded_fmt_stream_map || "";
+
+		// Find the valid links and place them in an array
+		var args = ytplayer.config.args;
+		var arr = [];
+		if (args.adaptive_fmts !== undefined && args.adaptive_fmts !== "") {
+			arr.push(args.adaptive_fmts);
+		}
+		if (args.url_encoded_fmt_stream_map !== undefined && args.url_encoded_fmt_stream_map !== "") {
+			arr.push(args.url_encoded_fmt_stream_map);
+		}
+
+
+		// Assert that there is a potential
+		var potential = arr.join(",");
 		potential = potential.replace(/([0-9])s=/g, ",s=");
+
+		// Make potential false if neither found
+		if (arr.length === 0) potential = false;
 
 		return potential;
 	},

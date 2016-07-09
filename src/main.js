@@ -8,7 +8,7 @@ var defaultSettings = {
 	ignoreMuted:true,
 	
 	// Types that are ignored
-	ignoreTypes:["webm"],
+	ignoreTypes:[],
 
 	// Values that are ignored
 	ignoreVals:[],
@@ -46,7 +46,7 @@ if (window.top === window) {
 function Program() {
 	// Make sure it is of the correct URL
 	var url = window.location.href;
-	if (url.indexOf("watch") === -1) return;
+	if (!url.match(/watch|embed/)) return;
 
 	unsafe.getVariable("ytplayer", function(ytp) {
 		// If the old thing is still there, wait a while
@@ -68,18 +68,20 @@ function Program() {
 		signature.fetchSignatureScript(function() {
 			// Reset the audio size
 			globalProperties.audioSize = false;
-			qualities.initialise();
-			qualities.sortItems();
 
-			// Update the download button, set it to be ENABLED
-			// with text "Download"
-			display.updateDownloadButton("Download");
+			// Initialise the available qualities
+			qualities.initialise(function() {
+				qualities.sortItems();
+				// Update the download button, set it to be ENABLED
+				// with text "Download"
+				display.updateDownloadButton("Download");
 
-			// Initialise the options & add it to the frame
-			display.initOptions(qualities, $("#downloadBtnInfo"));
+				// Initialise the options & add it to the frame
+				display.initOptions(qualities, $("#downloadBtnInfo"));
 
-			// Update the display (fetch sizes as well)
-			display.update();
+				// Update the display (fetch sizes as well)
+				display.update();
+			});
 		});
 	});
 }
