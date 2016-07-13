@@ -31,22 +31,22 @@ function main {
 			fi
 		done
 
-		# m4a && webm processing (untested)
+		# m4a && webm processing (works)
 		for j in *.webm; do
 			vTitle=$(getTitle "$j" "webm")
 			if [ "AUDIO - $vTitle" == "$title" ] && [ "$j" != "*.webm" ]; then
-				mux "$j" "$i" "$vTitle.webm"
+				mux "$j" "$i" "$vTitle.mp4"
 			fi
 		done
 	done
 
-	# webm && webm processing (untested)
+	# webm && webm processing (doesn't work)
 	for i in *.webm; do
 		title=$(getTitle "$i" "webm")
 		for j in *.webm; do
 			vTitle=$(getTitle "$j" "webm")
 			if [ "AUDIO - $vTitle" == "$title" ] && [ "$j" != "*.webm" ]; then
-				mux "$j" "$i" "$vTitle.webm"
+				mux "$j" "$i" "$vTitle.mp4"
 			fi
 		done
 	done

@@ -494,15 +494,18 @@ function Qualities() {
 		},
 		264: {
 			resolution:1440,
-			type:"mp4"
+			type:"mp4",
+			dash:true
 		},
 		266: {
 			resolution:2160,
-			type:"mp4"
+			type:"mp4",
+			dash:true
 		},
 		271: {
 			resolution:1440,
-			type:"webm"
+			type:"webm",
+			dash:true
 		},
 		278: {
 			resolution:140,
@@ -535,7 +538,8 @@ function Qualities() {
 		},
 		313: {
 			resolution:2160,
-			type:"webm"
+			type:"webm",
+			dash:true
 		},
 	};
 }
@@ -782,18 +786,21 @@ Qualities.prototype = {
 		return potential;
 	},
 	checkPotential: function(potential) {
-		var lengths = this.getPotentialLengths(potential);
-		var valid = (lengths.url >= lengths.url && lengths.sig > 1);
+		var valid = false;
+		if (potential) {
+			var lengths = this.getPotentialLengths(potential);
+			valid = (lengths.url >= lengths.url && lengths.sig > 1);
 
-		// Trace out why it isn't valid
-		if (!valid) {
-			var split = potential.split(",");
-			for (var i = 0; i<split.length; i++) {
-				var splitLengths = this.getPotentialLengths(split[i]);
-				if (splitLengths.url !== 1 || splitLengths.sig !== 1) {
-					console.log("checkPotential");
-					console.log(split[i]);
-					console.log(splitLengths.url, splitLengths.sig);
+			// Trace out why it isn't valid
+			if (!valid) {
+				var split = potential.split(",") || "";
+				for (var i = 0; i<split.length; i++) {
+					var splitLengths = this.getPotentialLengths(split[i]);
+					if (splitLengths.url !== 1 || splitLengths.sig !== 1) {
+						console.log("checkPotential");
+						console.log(split[i]);
+						console.log(splitLengths.url, splitLengths.sig);
+					}
 				}
 			}
 		}
@@ -1276,6 +1283,16 @@ AjaxClass.prototype = {
 		// Fix the drag-drop events causing ghost image
 		"img": {
 			"pointer-events": "none"
+		},
+		/* Download sprites */
+		".downloadIcon": {
+		    "margin-right":"4.5px"
+		},
+		".downArrow": {
+		    "margin-bottom":"-13px",
+		    "margin-left":"6px",
+		    "width":"13px",
+		    "transform":"translateY(-50%)"
 		}
 	};
 
@@ -1483,7 +1500,7 @@ var defaultSettings = {
 	ignoreMuted:true,
 	
 	// Types that are ignored
-	ignoreTypes:[],
+	ignoreTypes:["webm"],
 
 	// Values that are ignored
 	ignoreVals:[],

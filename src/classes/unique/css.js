@@ -112,6 +112,16 @@
 		// Fix the drag-drop events causing ghost image
 		"img": {
 			"pointer-events": "none"
+		},
+		/* Download sprites */
+		".downloadIcon": {
+		    "margin-right":"4.5px"
+		},
+		".downArrow": {
+		    "margin-bottom":"-13px",
+		    "margin-left":"6px",
+		    "width":"13px",
+		    "transform":"translateY(-50%)"
 		}
 	};
 

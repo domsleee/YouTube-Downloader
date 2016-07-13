@@ -8,7 +8,7 @@ var defaultSettings = {
 	ignoreMuted:true,
 	
 	// Types that are ignored
-	ignoreTypes:[],
+	ignoreTypes:["webm"],
 
 	// Values that are ignored
 	ignoreVals:[],
