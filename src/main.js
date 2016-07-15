@@ -88,14 +88,12 @@ function Program() {
 
 // Adds events to the window
 function AddEvents() {
-	var _this = this;
-
 	// Call the function on page change
-	this.lastURL = window.location.href;
+	window.lastURL = window.location.href;
 	setInterval(function() {
 		var newURL = window.location.href;
-		if (newURL !== _this.lastURL) {
-			_this.lastURL = newURL;
+		if (newURL !== window.lastURL) {
+			window.lastURL = newURL;
 			$(window).ready(function() {
 				Program();
 			});

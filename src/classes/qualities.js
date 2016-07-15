@@ -448,11 +448,8 @@ Qualities.prototype = {
 	// Get from ITAG
 	getFromItag: function(itag) {
 		var matches = qualities.items.listMatches("itag", Number(itag));
-		
-		// Audio can have multiple (i.e. for MP3)
-		var notAudio = Number(itag) !== 140;
 
-		if (matches.length !== 1 && notAudio) {
+		if (matches.length !== 1) {
 			console.log("ERROR: Found "+matches.length+" with itag: "+itag);
 		}
 		var item = matches[0] || {};
