@@ -874,7 +874,12 @@ GetSizes.prototype = {
 				method:"HEAD",
 				url:url,
 				success:function(xhr, text, jqXHR) {
-					var size = Number(Ajax.getResponseHeader(xhr, text, jqXHR, "Content-length"));
+					var size = Number(Ajax.getResponseHeader(xhr, text, jqXHR, "Content-Length"));
+
+					// Revert to old header name
+					if (size === 0) {
+						size = Number(Ajax.getResponseHeader(xhr, text, jqXHR, "Content-length"));
+					}
 					item.size = size;
 					callback($li, size);
 				}
