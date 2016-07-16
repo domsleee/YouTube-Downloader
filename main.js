@@ -145,14 +145,12 @@ function Display() {
 	// Sprites
 	// Download icon (with cloud)
 	this.$downloadIcon = $("<img>", {
-		style:"margin-right:4.5px",
-		class:"midalign",
+		class:"midalign downloadIcon",
 		src:"https://raw.githubusercontent.com/Domination9987/YouTube-Downloader/master/graphics/downIconMed.png"
 	});
 	// Down select arrow (for dropdown)
 	this.$downArrow = $("<img>", {
-		style:"margin-left:6px;width:13px;margin-bottom:-13px;transform:translateY(-50%);",
-		class:"midalign",
+		class:"midalign downArrow",
 		src:"https://raw.githubusercontent.com/Domination9987/YouTube-Downloader/master/graphics/downArrowLarge.png"
 	});
 }
