@@ -23,6 +23,9 @@ Signature.prototype = {
 				var text = (typeof(xhr) === "string") ? jqXHR.responseText : xhr.responseText;
 				_this.findSignatureCode(text);
 				callback();
+			},
+			error:function(xhr, text, jqXHR) {
+				console.log("Error getting signature script");
 			}
 		});
 	},

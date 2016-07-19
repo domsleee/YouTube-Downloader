@@ -14,7 +14,7 @@ var defaultSettings = {
 	ignoreVals:[],
 
 	// Have quality label on download
-	label:true,                 
+	label:true,
 };
 
 // Volatile properties

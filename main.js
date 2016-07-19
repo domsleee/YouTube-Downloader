@@ -939,6 +939,9 @@ Signature.prototype = {
 				var text = (typeof(xhr) === "string") ? jqXHR.responseText : xhr.responseText;
 				_this.findSignatureCode(text);
 				callback();
+			},
+			error:function(xhr, text, jqXHR) {
+				console.log("Error getting signature script");
 			}
 		});
 	},
@@ -1137,6 +1140,10 @@ AjaxClass.prototype = {
 		// Setup the request
 		var success = params.success;
 		var error   = params.error;
+
+		params.onerror = function(xhr) {
+			error(xhr);
+		}
 
 		params.onload = function(xhr) {
 			if (xhr.readyState === 4 && xhr.status === 200) {
@@ -1506,7 +1513,7 @@ var defaultSettings = {
 	ignoreVals:[],
 
 	// Have quality label on download
-	label:true,                 
+	label:true,
 };
 
 // Volatile properties
