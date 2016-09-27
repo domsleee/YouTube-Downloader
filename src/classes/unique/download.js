@@ -61,7 +61,7 @@ Download.prototype = {
 		if (os.os === 'win'){
 			SaveToDisk(URL.createObjectURL(text), settings);
 		} else {
-			SaveToDisk("https://github.com/Domination9987/YouTube-Downloader/raw/master/muxer/Muxer.zip", settings);
+			SaveToDisk("https://github.com/domsleee/YouTube-Downloader/raw/master/muxer/Muxer.zip", settings);
 		}*/
 	},
 	getOs: function() {

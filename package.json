@@ -4,7 +4,7 @@
 	"description": "Download Youtube videos in multiple formats",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/Domination9987/YouTube-Downloader"
+		"url": "https://github.com/domsleee/YouTube-Downloader"
 	},
 	"license": "MIT",
 	"dependencies": {
