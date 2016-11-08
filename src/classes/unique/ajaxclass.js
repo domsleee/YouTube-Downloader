@@ -17,7 +17,6 @@ AjaxClass.prototype = {
 			if (xhr.readyState === 4 && xhr.status === 200) {
 				success(xhr);
 			} else {
-				console.log(xhr);
 				if (typeof error === "function") error(xhr);
 			}
 		};

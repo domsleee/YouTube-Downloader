@@ -195,6 +195,7 @@ Display.prototype = {
 				html  : quality.label,
 				itag  : quality.itag,
 				style : "display:"+display,
+				href  : quality.url
 			});
 
 			// Tags - get them and then append them to the $li
@@ -720,7 +721,6 @@ Qualities.prototype = {
 		// We must make a get request, and find the
 		// additional qualities within the file
 		if (dashmpd !== undefined) {
-			console.log("Making dashmpd request...");
 			var _this = this;
 			Ajax.request({
 				method:"GET",
@@ -738,6 +738,10 @@ Qualities.prototype = {
 
 					assert(add.length > 0, "No videos found in dashmpd!");
 					potential = potential+",url="+add.join(",url=");
+					callback(potential);
+				},
+				error: function(xhr) {
+					console.log("ERROR fetching from dashmpd!", xhr.status);
 					callback(potential);
 				}
 			});
@@ -759,7 +763,7 @@ Qualities.prototype = {
 		// Encode it
 		return encodeURIComponent(url);
 	},
-	// Get potential list
+	// Get potential list from adaptive_fmts and url_encoded_fmt_stream_map
 	getPotential: function() {
 		assert(ytplayer !== undefined, "Ytplayer is undefined!");
 
@@ -1149,7 +1153,6 @@ AjaxClass.prototype = {
 			if (xhr.readyState === 4 && xhr.status === 200) {
 				success(xhr);
 			} else {
-				console.log(xhr);
 				if (typeof error === "function") error(xhr);
 			}
 		};

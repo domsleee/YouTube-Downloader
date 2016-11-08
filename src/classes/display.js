@@ -60,6 +60,7 @@ Display.prototype = {
 				html  : quality.label,
 				itag  : quality.itag,
 				style : "display:"+display,
+				href  : quality.url
 			});
 
 			// Tags - get them and then append them to the $li
