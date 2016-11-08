@@ -558,7 +558,7 @@ Qualities.prototype = {
 				// Get relevant properties
 				var sect = split[i];
 				var url  = decodeURIComponent(sect.getSetting("url"));
-				var s    = sect.getSetting("s");
+				var s    = decodeURIComponent(sect).getSetting("s"); // signature can be in section
 				var type = decodeURIComponent(url.getSetting("mime"));
 				var clen = url.getSetting("clen") || sect.getSetting("clen");
 				var itag = parseInt(url.getSetting("itag"), 10);
@@ -713,14 +713,17 @@ Qualities.prototype = {
 	// Get potential inclusive of dash formats from
 	// 2010-2011
 	getPotentialDash: function(callback) {
-		// Get native potential, within ytplayer
+		// Get potential using adaptive_fmts and url_encoded_fmt_stream_map
 		var potential = this.getPotential();
 
+		// Get potential from within dashmpd - not quite working
 		var dashmpd = ytplayer.config.args.dashmpd;
-
-		// We must make a get request, and find the
-		// additional qualities within the file
 		if (dashmpd !== undefined) {
+			console.log("Making dashmpd request...");
+
+			var s = dashmpd.match(/\/s\/([^\/]*)/)[1];
+			dashmpd += "/signature/"+signature.decodeSignature(s, globalProperties.signatureCode);
+
 			var _this = this;
 			Ajax.request({
 				method:"GET",
@@ -735,13 +738,12 @@ Qualities.prototype = {
 						var url = addPotential[i*2 + 1];
 						add.push(_this.decodeURL(url));
 					}
-
 					assert(add.length > 0, "No videos found in dashmpd!");
 					potential = potential+",url="+add.join(",url=");
 					callback(potential);
 				},
 				error: function(xhr) {
-					console.log("ERROR fetching from dashmpd!", xhr.status);
+					console.log("dashmpd request failed!", xhr.status);
 					callback(potential);
 				}
 			});
@@ -756,8 +758,8 @@ Qualities.prototype = {
 		var split = url.split("videoplayback/");
 		var host = split[0];
 		var str = split[1];
-		str = str.replace(/\/([^\/]*(?:\/|$))/g, "=$1");
-		str = str.replace(/\//g, "&");
+		str = str.replace(/([^\/]+)\/([^\/]*)\/?/g, "$1=$2&");;
+		str = str.replace(/&$/g, "");
 		url = host+"videoplayback?"+str;
 
 		// Encode it
@@ -1089,7 +1091,7 @@ Signature.prototype = {
 	},
 	decryptSignature: function(url, s) {
 		url = decodeURIComponent(url);
-		var sig = url.getSetting("signature") || url.getSetting("sig");
+		var sig = url.getSetting("(?:signature|sig)");
 
 		// Decryption is only required if signature is non-existant AND
 		// there is an encrypted property (s)

@@ -169,7 +169,7 @@ Signature.prototype = {
 	},
 	decryptSignature: function(url, s) {
 		url = decodeURIComponent(url);
-		var sig = url.getSetting("signature") || url.getSetting("sig");
+		var sig = url.getSetting("(?:signature|sig)");
 
 		// Decryption is only required if signature is non-existant AND
 		// there is an encrypted property (s)
