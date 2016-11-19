@@ -11,7 +11,7 @@ AjaxClass.prototype = {
 
 		params.onerror = function(xhr) {
 			error(xhr);
-		}
+		};
 
 		params.onload = function(xhr) {
 			if (xhr.readyState === 4 && xhr.status === 200) {

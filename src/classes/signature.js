@@ -20,11 +20,11 @@ Signature.prototype = {
 			method:"GET",
 			url:scriptURL,
 			success:function(xhr, text, jqXHR) {
-				var text = (typeof(xhr) === "string") ? jqXHR.responseText : xhr.responseText;
-				_this.findSignatureCode(text);
+				var resp = (typeof(xhr) === "string") ? jqXHR.responseText : xhr.responseText;
+				_this.findSignatureCode(resp);
 				callback();
 			},
-			error:function(xhr, text, jqXHR) {
+			error:function() {
 				console.log("Error getting signature script");
 			}
 		});

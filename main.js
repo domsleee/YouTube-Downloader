@@ -135,26 +135,24 @@ $.fn.extend({
 // =================================================
 // Generates the display, updates the display, all
 // things related to the interface can be found here
-function Display() {
-	// The text colour of the size once loaded
-	this.SIZE_LOADED = "red";
 
-	// The text colour of the size when waiting on audio size
-	this.SIZE_WAITING = "green";
+// The text colour of the size once loaded
+var SIZE_LOADED  = "red";
+var SIZE_WAITING = "green";
 
-	// Sprites
-	// Download icon (with cloud)
-	this.$downloadIcon = $("<img>", {
-		class:"midalign downloadIcon",
-		src:"https://raw.githubusercontent.com/domsleee/YouTube-Downloader/master/graphics/downIconMed.png"
-	});
-	// Down select arrow (for dropdown)
-	this.$downArrow = $("<img>", {
-		class:"midalign downArrow",
-		src:"https://raw.githubusercontent.com/domsleee/YouTube-Downloader/master/graphics/downArrowLarge.png"
-	});
-}
+// Sprites:
+// - Download icon (with cloud)
+// - Down select arrow (for dropdown)
+var $downloadIcon = $("<img>", {
+	class:"midalign downloadIcon",
+	src:"https://raw.githubusercontent.com/domsleee/YouTube-Downloader/master/graphics/downIconMed.png"
+});
+var $downArrow = $("<img>", {
+	class:"midalign downArrow",
+	src:"https://raw.githubusercontent.com/domsleee/YouTube-Downloader/master/graphics/downArrowLarge.png"
+});
 
+function Display() {};
 Display.prototype = {
 	update: function() {
 		var _this = this;
@@ -169,9 +167,7 @@ Display.prototype = {
 		// Drop down list
 		$lis = $("#options").find("li");
 		for (var i = 0; i<$lis.length; i++) {
-			sizes.getSize($lis.eq(i), function($li, size) {
-				_this.updateDisplay($li, size);
-			});
+			sizes.getSize($lis.eq(i), _this.updateDisplay);
 		}
 	},
 	// Initialises the display
@@ -232,7 +228,7 @@ Display.prototype = {
 		var sizes = qualities.sizes;
 
 		var _this = this;
-		var color = (item.dash) ? this.SIZE_WAITING : this.SIZE_LOADED;
+		var color = (item.dash) ? SIZE_WAITING : SIZE_LOADED;
 
 		// If the SIZE tag doesn't already exist, add it
 		var extraClass = (forceNeutralFloat) ? " floatNormal" : "";
@@ -256,8 +252,7 @@ Display.prototype = {
 				size = parseInt(size) + parseInt(globalProperties.audioSize);
 
 				$li.find("span.size").html(sizes.formatSize(size));
-				$li.find("span.size").css("color", this.SIZE_LOADED);
-
+				$li.find("span.size").css("color", SIZE_LOADED);
 			} else {
 				// Try again in 2 seconds
 				setTimeout(function() {
@@ -281,7 +276,7 @@ Display.prototype = {
 			$button = $("<button>", {
 				id:"downloadBtn"
 			});
-			$button.append(this.$downloadIcon);
+			$button.append($downloadIcon);
 			$button.append($("<span>", {
 				class:"midalign"
 			}));
@@ -303,7 +298,7 @@ Display.prototype = {
 		if ($downloadBtnInfo.length === 0) {
 			$downloadBtnInfo = $("<span>", {
 				id:"downloadBtnInfo"
-			}).append(this.$downArrow);
+			}).append($downArrow);
 
 			// Find the container
 			var $container = this.checkContainer();
@@ -629,13 +624,14 @@ Qualities.prototype = {
 						itag : itag,
 					});
 
-					_this.sizes.getSize($li, function($li, size) {
-						globalProperties.audioSize = size;
-					});
+					_this.sizes.getSize($li, _this.setAudioSize);
 				}
 			}
 			callback();
 		});
+	},
+	setAudioSize: function($li, size) {
+		globalProperties.audioSize = size;
 	},
 	getLabel: function(tag) {
 		var label = false;
@@ -729,11 +725,11 @@ Qualities.prototype = {
 				method:"GET",
 				url:dashmpd,
 				success: function(xhr, text, jqXHR) {
-					var text = (typeof(xhr) === "string") ? jqXHR.responseText : xhr.responseText;
+					var resp = (typeof(xhr) === "string") ? jqXHR.responseText : xhr.responseText;
 
 					// Add the potential from BaseURL tags
 					var add = [];
-					var addPotential = text.split(/\<BaseURL\>([^\<]*)\<\/BaseURL\>/);
+					var addPotential = resp.split(/<BaseURL>([^<]*)<\/BaseURL>/);
 					for (var i = 0; i<Math.floor(addPotential.length/2); i++) {
 						var url = addPotential[i*2 + 1];
 						add.push(_this.decodeURL(url));
@@ -758,7 +754,7 @@ Qualities.prototype = {
 		var split = url.split("videoplayback/");
 		var host = split[0];
 		var str = split[1];
-		str = str.replace(/([^\/]+)\/([^\/]*)\/?/g, "$1=$2&");;
+		str = str.replace(/([^\/]+)\/([^\/]*)\/?/g, "$1=$2&");
 		str = str.replace(/&$/g, "");
 		url = host+"videoplayback?"+str;
 
@@ -942,11 +938,11 @@ Signature.prototype = {
 			method:"GET",
 			url:scriptURL,
 			success:function(xhr, text, jqXHR) {
-				var text = (typeof(xhr) === "string") ? jqXHR.responseText : xhr.responseText;
-				_this.findSignatureCode(text);
+				var resp = (typeof(xhr) === "string") ? jqXHR.responseText : xhr.responseText;
+				_this.findSignatureCode(resp);
 				callback();
 			},
-			error:function(xhr, text, jqXHR) {
+			error:function() {
 				console.log("Error getting signature script");
 			}
 		});
@@ -1149,7 +1145,7 @@ AjaxClass.prototype = {
 
 		params.onerror = function(xhr) {
 			error(xhr);
-		}
+		};
 
 		params.onload = function(xhr) {
 			if (xhr.readyState === 4 && xhr.status === 200) {
@@ -1649,4 +1645,4 @@ function AddEvents() {
 		// Hide the options
 		$("#options").hide();
 	});
-};
+}

@@ -145,4 +145,4 @@ function AddEvents() {
 		// Hide the options
 		$("#options").hide();
 	});
-};
+}

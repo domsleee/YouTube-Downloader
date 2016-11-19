@@ -243,13 +243,14 @@ Qualities.prototype = {
 						itag : itag,
 					});
 
-					_this.sizes.getSize($li, function($li, size) {
-						globalProperties.audioSize = size;
-					});
+					_this.sizes.getSize($li, _this.setAudioSize);
 				}
 			}
 			callback();
 		});
+	},
+	setAudioSize: function($li, size) {
+		globalProperties.audioSize = size;
 	},
 	getLabel: function(tag) {
 		var label = false;
@@ -343,11 +344,11 @@ Qualities.prototype = {
 				method:"GET",
 				url:dashmpd,
 				success: function(xhr, text, jqXHR) {
-					var text = (typeof(xhr) === "string") ? jqXHR.responseText : xhr.responseText;
+					var resp = (typeof(xhr) === "string") ? jqXHR.responseText : xhr.responseText;
 
 					// Add the potential from BaseURL tags
 					var add = [];
-					var addPotential = text.split(/\<BaseURL\>([^\<]*)\<\/BaseURL\>/);
+					var addPotential = resp.split(/<BaseURL>([^<]*)<\/BaseURL>/);
 					for (var i = 0; i<Math.floor(addPotential.length/2); i++) {
 						var url = addPotential[i*2 + 1];
 						add.push(_this.decodeURL(url));
@@ -372,7 +373,7 @@ Qualities.prototype = {
 		var split = url.split("videoplayback/");
 		var host = split[0];
 		var str = split[1];
-		str = str.replace(/([^\/]+)\/([^\/]*)\/?/g, "$1=$2&");;
+		str = str.replace(/([^\/]+)\/([^\/]*)\/?/g, "$1=$2&");
 		str = str.replace(/&$/g, "");
 		url = host+"videoplayback?"+str;
 
